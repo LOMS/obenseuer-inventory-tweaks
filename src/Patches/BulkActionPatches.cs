@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using HarmonyLib;
 using OS.Items;
@@ -39,6 +40,12 @@ namespace InventoryTweaks.Patches
         private static float _pendingUntil;
 
         private static readonly bool[] LabelOverridden = new bool[2];
+
+        // Bulk sound batching: first sound plays at once, one more after a short delay
+        private const float SecondSoundDelay = 0.1f;
+        private static bool _soundBatchActive;
+        private static bool _soundBatchPlayed;
+        private static AudioClip _suppressedClip;
 
         private static bool ShiftHeld => Input.GetKey(KeyCode.LeftShift);
 
@@ -90,7 +97,15 @@ namespace InventoryTweaks.Patches
                     {
                         return false;
                     }
-                    RepeatOnStack(itemData, itemData.item.Actions[index]);
+                    BeginSoundBatch();
+                    try
+                    {
+                        RepeatOnStack(itemData, itemData.item.Actions[index]);
+                    }
+                    finally
+                    {
+                        EndSoundBatch();
+                    }
                     Refresh(info);
                     return true;
 
@@ -99,7 +114,15 @@ namespace InventoryTweaks.Patches
                     if (confirming)
                     {
                         ClearPending();
-                        InvokeOnEach(targets, index);
+                        BeginSoundBatch();
+                        try
+                        {
+                            InvokeOnEach(targets, index);
+                        }
+                        finally
+                        {
+                            EndSoundBatch();
+                        }
                         Refresh(info);
                         return true;
                     }
@@ -115,6 +138,46 @@ namespace InventoryTweaks.Patches
                     ClearPending();
                     return false;
             }
+        }
+
+        private static void BeginSoundBatch()
+        {
+            _soundBatchActive = true;
+            _soundBatchPlayed = false;
+            _suppressedClip = null;
+        }
+
+        private static void EndSoundBatch()
+        {
+            _soundBatchActive = false;
+            if (_suppressedClip != null && Plugin.Instance != null)
+            {
+                Plugin.Instance.StartCoroutine(PlayDelayed(_suppressedClip));
+            }
+            _suppressedClip = null;
+        }
+
+        private static IEnumerator PlayDelayed(AudioClip clip)
+        {
+            // Realtime: the game may be paused while the inventory is open
+            yield return new WaitForSecondsRealtime(SecondSoundDelay);
+            ItemInfo.instance?.PlaySound(clip);
+        }
+
+        /// <summary>Returns false when the sound must be skipped (repeat inside a bulk action).</summary>
+        public static bool AllowSound(AudioClip clip)
+        {
+            if (!_soundBatchActive)
+            {
+                return true;
+            }
+            if (!_soundBatchPlayed)
+            {
+                _soundBatchPlayed = true;
+                return true;
+            }
+            _suppressedClip = clip;
+            return false;
         }
 
         private static void RepeatOnStack(ItemData itemData, Item.ItemAction action)
@@ -288,6 +351,15 @@ namespace InventoryTweaks.Patches
             {
                 text.text = actions[index].Name;
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(ItemInfo), nameof(ItemInfo.PlaySound), typeof(AudioClip))]
+    internal static class BulkSoundPatch
+    {
+        private static bool Prefix(AudioClip clip)
+        {
+            return BulkActions.AllowSound(clip);
         }
     }
 

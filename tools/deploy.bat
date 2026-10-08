@@ -11,5 +11,3 @@ if not errorlevel 1 (
 
 rem Builds first, then copies the DLL and PDB to BepInEx\plugins\InventoryTweaks
 dotnet build "%~dp0..\InventoryTweaks.csproj" -t:Deploy %*
-
-pause

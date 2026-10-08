@@ -16,11 +16,15 @@ namespace InventoryTweaks
 
         internal static ManualLogSource Log;
 
+        // Used to run coroutines from static patch code
+        internal static Plugin Instance;
+
         private Harmony _harmony;
         private bool _labelErrorLogged;
 
         private void Awake()
         {
+            Instance = this;
             Log = Logger;
             _harmony = new Harmony(Guid);
             _harmony.PatchAll(typeof(Plugin).Assembly);

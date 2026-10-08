@@ -2,5 +2,3 @@
 setlocal
 
 dotnet build "%~dp0..\InventoryTweaks.csproj" %*
-
-pause
