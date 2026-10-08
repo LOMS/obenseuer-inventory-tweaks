@@ -1,0 +1,17 @@
+# Decompiled game code (third-party, never commit)
+reference/decompiled/
+
+# Build output
+bin/
+obj/
+
+# Local machine settings (game path)
+Config.Build.user.props
+
+# IDE artifacts
+.vs/
+.idea/
+*.user
+*.suo
+.vscode/*
+!.vscode/tasks.json

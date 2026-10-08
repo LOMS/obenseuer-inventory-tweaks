@@ -1,0 +1,9 @@
+<!--
+  Copy this file to Config.Build.user.props (not committed) and set your paths.
+-->
+<Project>
+  <PropertyGroup>
+    <!-- Game install folder (the one that contains Obenseuer.exe) -->
+    <GameDir>C:\Program Files (x86)\Steam\steamapps\common\Obenseuer</GameDir>
+  </PropertyGroup>
+</Project>

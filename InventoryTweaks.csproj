@@ -1,0 +1,81 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Local paths (GameDir); see Config.Build.user.props.template -->
+  <Import Project="Config.Build.user.props" Condition="Exists('Config.Build.user.props')" />
+
+  <PropertyGroup>
+    <AssemblyName>InventoryTweaks</AssemblyName>
+    <RootNamespace>InventoryTweaks</RootNamespace>
+    <Version>0.2.0</Version>
+
+    <!--
+      The game runs on Unity Mono with mscorlib 4.0 (Assembly-CSharp references
+      mscorlib 4.0 + netstandard 2.1), so we target net472 and compile against the
+      game's own BCL from Managed\ instead of a NuGet reference-assembly package.
+    -->
+    <TargetFramework>net472</TargetFramework>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <AutomaticallyUseReferenceAssemblyPackages>false</AutomaticallyUseReferenceAssemblyPackages>
+    <NoStdLib>true</NoStdLib>
+    <!-- Skip the .NET Framework targeting pack lookup; the BCL comes from Managed\ -->
+    <BypassFrameworkInstallChecks>true</BypassFrameworkInstallChecks>
+    <FrameworkPathOverride>$(GameDir)\Obenseuer_Data\Managed</FrameworkPathOverride>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <DebugType>portable</DebugType>
+
+    <ManagedDir>$(GameDir)\Obenseuer_Data\Managed</ManagedDir>
+    <BepInExCoreDir>$(GameDir)\BepInEx\core</BepInExCoreDir>
+    <PluginsDir>$(GameDir)\BepInEx\plugins\InventoryTweaks</PluginsDir>
+  </PropertyGroup>
+
+  <Target Name="CheckGameDir" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="'$(GameDir)' == ''"
+           Text="GameDir is not set. Copy Config.Build.user.props.template to Config.Build.user.props and set the path." />
+    <Error Condition="!Exists('$(ManagedDir)\Assembly-CSharp.dll')"
+           Text="Assembly-CSharp.dll not found in '$(ManagedDir)'. Check GameDir." />
+  </Target>
+
+  <ItemGroup>
+    <Compile Remove="reference\**" />
+    <None Remove="reference\**" />
+  </ItemGroup>
+
+  <!-- All references point to the installed game; none are copied to the output -->
+  <ItemDefinitionGroup>
+    <Reference>
+      <Private>false</Private>
+    </Reference>
+  </ItemDefinitionGroup>
+
+  <ItemGroup>
+    <!-- Base class library shipped with the game's Mono runtime -->
+    <Reference Include="mscorlib"><HintPath>$(ManagedDir)\mscorlib.dll</HintPath></Reference>
+    <Reference Include="System"><HintPath>$(ManagedDir)\System.dll</HintPath></Reference>
+    <Reference Include="System.Core"><HintPath>$(ManagedDir)\System.Core.dll</HintPath></Reference>
+    <Reference Include="netstandard"><HintPath>$(ManagedDir)\netstandard.dll</HintPath></Reference>
+
+    <!-- BepInEx 6 (Unity.Mono) + HarmonyX -->
+    <Reference Include="BepInEx.Core"><HintPath>$(BepInExCoreDir)\BepInEx.Core.dll</HintPath></Reference>
+    <Reference Include="BepInEx.Unity.Mono"><HintPath>$(BepInExCoreDir)\BepInEx.Unity.Mono.dll</HintPath></Reference>
+    <Reference Include="0Harmony"><HintPath>$(BepInExCoreDir)\0Harmony.dll</HintPath></Reference>
+
+    <!-- Unity + game -->
+    <Reference Include="UnityEngine"><HintPath>$(ManagedDir)\UnityEngine.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(ManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(ManagedDir)\UnityEngine.UI.dll</HintPath></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath></Reference>
+  </ItemGroup>
+
+  <!-- Manual deploy: dotnet build -t:Deploy (close the game first) -->
+  <Target Name="Deploy" DependsOnTargets="Build">
+    <MakeDir Directories="$(PluginsDir)" />
+    <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb" DestinationFolder="$(PluginsDir)" />
+    <Message Importance="high" Text="Deployed to $(PluginsDir)" />
+  </Target>
+
+</Project>
