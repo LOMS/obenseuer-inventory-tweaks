@@ -39,6 +39,8 @@ research and design decisions: `reference\notes.md`.
 
 ## Layout
 - `src\Plugin.cs` — entry point (Harmony `PatchAll`, per-frame button labels)
+- `src\ItemKind.cs` — "same kind of item" (item id + liquid inside) for the
+  move-similar features
 - `src\HintTooltip.cs` — hover tooltip component (game `ToolTip`) used on every
   button whose behavior the mod changes
 - Note: the game defines a global `Button` type; use `UnityEngine.UI.Button`.

@@ -254,6 +254,17 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   while Alt is held, original text restored on release.
 - Note: the game has a global `Button` type — use `UnityEngine.UI.Button`.
 
+## F. "Same kind" for move-similar features — `src\ItemKind.cs`
+- Used by Move all of a kind (A), Stack and Take similar (D) instead of a bare
+  `itemId`: key = `itemId` + liquid. Liquid = `ItemLiquidData` in the stack's
+  `Meta` with `liquidItem != null` and `GetLiquidAmount(itemAmount) > 0`;
+  otherwise "empty". Empty containers match only empty ones, filled ones only
+  the same container with the same liquid. Fill level is not compared — merging
+  partly filled stacks is left to the game (`ItemStack.AddItemToPanel` →
+  `SlotController.SlotHasSpaceForItem`).
+- Note: `AddItemToPanel` turns a container with 0 liquid into its
+  `emptyContainerItem` (different item id) on add.
+
 ## E. Tooltips — `src\HintTooltip.cs`
 - Own component (IPointerEnter/Exit → `ToolTip.instance.Activate(title, details)` /
   `Deactivate()`); a provider delegate is asked on every hover, returning false

@@ -6,7 +6,7 @@ inventory screens.
 ## Features
 
 **Quick transfer between inventories** (e.g. inventory ↔ storage)
-- **Move stack** (Shift + Left Click): move the whole stack
+- **Move stack** (Shift + Left Click): move the whole stack with click
 - **Move one** (Shift + Right Click): move a single item
 - **Move all of a kind** (Shift + Ctrl + Left Click): move every stack of that
   item from the same inventory
@@ -38,6 +38,9 @@ container, crafting at a station and harvesting a garden or an animal cage.
 - With no storage open, Move stack equips the item, like a vanilla double-click.
 - Move all of a kind works only with a storage open; in trade it moves just the
   clicked stack, so it never sells or buys everything at once.
+- Move all of a kind, Stack and Take similar treat liquid containers by their
+  contents: empty containers go with empty ones, filled ones only with the same
+  container holding the same liquid.
 - Stack and Take similar top up existing stacks first, then use free slots.
   Take similar ignores the backpack: it neither counts its items nor puts
   anything there.

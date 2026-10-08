@@ -73,13 +73,14 @@ namespace InventoryTweaks.Patches
                 return false;
             }
 
-            int itemId = origin.itemStack.itemId;
+            // Same item and, for liquid containers, the same liquid (or empty)
+            ItemKind kind = ItemKind.Of(origin.itemStack);
             SlotController[] slots = origin.Siblings ?? new[] { origin };
             bool movedAny = false;
 
             foreach (SlotController slot in slots)
             {
-                if (slot == null || slot.itemStack.itemId != itemId || slot.itemStack.itemAmount <= 0)
+                if (!ItemKind.HasItem(slot) || ItemKind.Of(slot.itemStack) != kind)
                 {
                     continue;
                 }

@@ -172,15 +172,8 @@ namespace InventoryTweaks.Patches
             }
 
             SlotController[] targets = storage.Slots;
-            var itemIds = new HashSet<int>();
-            foreach (SlotController target in targets)
-            {
-                if (target != null && target.itemStack.itemId != -1 && target.itemStack.itemAmount > 0)
-                {
-                    itemIds.Add(target.itemStack.itemId);
-                }
-            }
-            if (itemIds.Count == 0)
+            HashSet<ItemKind> kinds = KindsIn(targets);
+            if (kinds.Count == 0)
             {
                 return;
             }
@@ -189,13 +182,13 @@ namespace InventoryTweaks.Patches
             bool leftOver = false;
             foreach (SlotController source in GetSources(storage, ShiftHeld))
             {
-                if (source == null || !itemIds.Contains(source.itemStack.itemId) || source.itemStack.itemAmount <= 0)
+                if (!ItemKind.HasItem(source) || !kinds.Contains(ItemKind.Of(source.itemStack)))
                 {
                     continue;
                 }
                 int moved = MoveToContainer(source, targets);
                 movedAny |= moved > 0;
-                leftOver |= source.itemStack.itemId != -1 && source.itemStack.itemAmount > 0;
+                leftOver |= ItemKind.HasItem(source);
             }
 
             if (movedAny)
@@ -207,6 +200,20 @@ namespace InventoryTweaks.Patches
             {
                 panel.StorageFull();
             }
+        }
+
+        /// <summary>Kinds (item + liquid) of everything in the given slots.</summary>
+        internal static HashSet<ItemKind> KindsIn(SlotController[] slots)
+        {
+            var kinds = new HashSet<ItemKind>();
+            foreach (SlotController slot in slots)
+            {
+                if (ItemKind.HasItem(slot))
+                {
+                    kinds.Add(ItemKind.Of(slot.itemStack));
+                }
+            }
+            return kinds;
         }
 
         private static IEnumerable<SlotController> GetSources(Storage openStorage, bool includeBackpack)
@@ -232,8 +239,8 @@ namespace InventoryTweaks.Patches
         }
 
         /// <summary>
-        /// Moves one source stack into the target slots (same-item stacks first, then free
-        /// slots); returns the moved amount. Shared with "Take similar".
+        /// Moves one source stack into the target slots (stacks of the same kind first,
+        /// then free slots); returns the moved amount. Shared with "Take similar".
         /// </summary>
         internal static int MoveToContainer(SlotController source, SlotController[] targets)
         {
@@ -248,17 +255,23 @@ namespace InventoryTweaks.Patches
             }
 
             Item item = stack.itemReference.Item;
-            int itemId = stack.itemId;
+            ItemKind kind = ItemKind.Of(stack);
             int stackAmount = stack.itemAmount;
             int remaining = stackAmount;
 
-            // Pass 1: top up stacks of the same item; pass 2: free slots
+            // Pass 1: top up stacks of the same kind (incl. liquid); pass 2: free slots
             for (int pass = 0; pass < 2 && remaining > 0; pass++)
             {
-                int wantedId = pass == 0 ? itemId : -1;
                 foreach (SlotController target in targets)
                 {
-                    if (target == null || target.itemStack.itemId != wantedId || (target.slot != null && target.slot.noDrop))
+                    if (target == null || (target.slot != null && target.slot.noDrop))
+                    {
+                        continue;
+                    }
+                    bool suitable = pass == 0
+                        ? ItemKind.HasItem(target) && ItemKind.Of(target.itemStack) == kind
+                        : target.itemStack.itemId == -1;
+                    if (!suitable)
                     {
                         continue;
                     }
@@ -362,25 +375,18 @@ namespace InventoryTweaks.Patches
             }
 
             SlotController[] targets = Inventory.instance.Slots;
-            var itemIds = new HashSet<int>();
-            foreach (SlotController target in targets)
-            {
-                if (target != null && target.itemStack.itemId != -1 && target.itemStack.itemAmount > 0)
-                {
-                    itemIds.Add(target.itemStack.itemId);
-                }
-            }
+            HashSet<ItemKind> kinds = StackButton.KindsIn(targets);
 
             bool movedAny = false;
             bool leftOver = false;
             foreach (SlotController source in storage.Slots)
             {
-                if (source == null || !itemIds.Contains(source.itemStack.itemId) || source.itemStack.itemAmount <= 0)
+                if (!ItemKind.HasItem(source) || !kinds.Contains(ItemKind.Of(source.itemStack)))
                 {
                     continue;
                 }
                 movedAny |= StackButton.MoveToContainer(source, targets) > 0;
-                leftOver |= source.itemStack.itemId != -1 && source.itemStack.itemAmount > 0;
+                leftOver |= ItemKind.HasItem(source);
             }
 
             if (movedAny)
