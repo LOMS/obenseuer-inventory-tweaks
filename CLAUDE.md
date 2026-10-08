@@ -20,6 +20,8 @@ research and design decisions: `reference\notes.md`.
 - "Stack" button in the storage panel (`src\Patches\StackButtonPatches.cs`):
   moves items of the types already in the container from the inventory into it;
   Shift+Click ("Stack+") also from the backpack; tooltip on hover.
+  "Stack allowed" (left of Stack, only for containers with `AllowedCategories`)
+  moves every item the container accepts.
   Alt + Take all ("Take similar") is the reverse: takes only the types already in
   the main inventory (same file).
 - All moves/actions reuse the game's own methods (`QuickMove`, `ItemAction.Invoke`,

@@ -7,19 +7,24 @@ using UnityEngine.UI;
 namespace InventoryTweaks.Patches
 {
     /// <summary>
-    /// "Stack" button in the storage panel, between "Sort" and "Take all".
-    /// Moves items of every type already present in the open container from the
-    /// player's inventory into it: existing stacks first, then free slots.
-    /// Shift+Click also takes from the backpack ("Stack+").
+    /// Extra buttons in the storage panel, between "Sort" and "Take all":
+    /// - "Stack": moves items of every kind already present in the open container
+    ///   from the player's inventory into it (existing stacks first, then free slots);
+    /// - "Stack allowed" (only for containers with an allowed-categories filter):
+    ///   moves every item the container accepts.
+    /// Shift+Click also takes from the backpack ("Stack+" / "Stack allowed+").
     /// </summary>
     internal static class StackButton
     {
-        private const string Label = "Stack";
-        private const string LabelWithBackpack = "Stack+";
-        private const string TooltipTitle = "Stack";
-        private const string TooltipDetails =
+        private const string StackLabel = "Stack";
+        private const string StackTooltipDetails =
             "Move items of the types already in this container from your inventory.\n" +
             "Shift + Click: also from your backpack.";
+        private const string AllowedLabel = "Stack allowed";
+        private const string AllowedTooltipDetails =
+            "Move every item this container accepts from your inventory.\n" +
+            "Shift + Click: also from your backpack.";
+        private const string BackpackSuffix = "+";
         private const string TakeAllTooltipTitle = "Take all";
         private const string TakeAllTooltipDetails =
             "Take everything from this container.\n" +
@@ -35,28 +40,46 @@ namespace InventoryTweaks.Patches
         private static readonly AccessTools.FieldRef<Storage, bool> StorageChanged =
             AccessTools.FieldRefAccess<Storage, bool>("storageChanged");
 
+        private static readonly AccessTools.FieldRef<StoragePanelUI, TextMeshProUGUI> TitleText =
+            AccessTools.FieldRefAccess<StoragePanelUI, TextMeshProUGUI>("storageName");
+
+        private const float RowPadding = 4f;
+
+        private sealed class PanelButton
+        {
+            public GameObject GameObject;
+            public RectTransform Rect;
+            public TextMeshProUGUI Text;
+            public string Label;
+        }
+
         private static StoragePanelUI _panel;
-        private static GameObject _button;
-        private static TextMeshProUGUI _label;
+        private static PanelButton _stack;
+        private static PanelButton _allowed;
+        // Vanilla elements the layout may move; restored before every layout
+        private static Vector2 _sortOriginalPosition;
+        private static Vector2 _takeAllOriginalPosition;
+        private static Vector2 _titleOriginalPosition;
+        private static Vector2 _titleOriginalSize;
+        private static TextWrappingModes _titleOriginalWrapping;
+        private static TextOverflowModes _titleOriginalOverflow;
+        private static bool _parentHasLayoutGroup;
+        private static bool? _layoutWithAllowed;
 
         private static bool ShiftHeld => Input.GetKey(KeyCode.LeftShift);
 
-        /// <summary>Creates the button once and keeps its visibility in sync with "Take all".</summary>
+        /// <summary>Creates the buttons once and refreshes their visibility.</summary>
         public static void OnPanelEnabled(StoragePanelUI panel)
         {
-            if (_button == null || _panel != panel)
+            if (_stack == null || _stack.GameObject == null || _panel != panel)
             {
                 Create(panel);
-            }
-            if (_button != null)
-            {
-                // Vanilla hides Take all during trade; follow it
-                _button.SetActive(panel.takeAllButton.activeSelf);
             }
             if (panel.takeAllButton != null && panel.takeAllButton.GetComponent<HintTooltip>() == null)
             {
                 HintTooltip.Attach(panel.takeAllButton, TakeAllTooltipTitle, TakeAllTooltipDetails);
             }
+            UpdateButtons();
         }
 
         private static void Create(StoragePanelUI panel)
@@ -69,125 +92,430 @@ namespace InventoryTweaks.Patches
                 return;
             }
 
-            // Clone Sort, not Take all: Take all has a Relay (savable, GUID-based)
             _panel = panel;
-            _button = Object.Instantiate(sort, sort.transform.parent);
-            _button.name = "Stack button";
-
-            // Fully qualified: the game has its own global "Button" type
-            UnityEngine.UI.Button button = _button.GetComponent<UnityEngine.UI.Button>();
-            if (button != null)
+            _sortOriginalPosition = sort.GetComponent<RectTransform>().anchoredPosition;
+            _takeAllOriginalPosition = takeAll.GetComponent<RectTransform>().anchoredPosition;
+            TextMeshProUGUI title = TitleText(panel);
+            if (title != null)
             {
-                // Replace the cloned persistent "sort" listener
-                button.onClick = new UnityEngine.UI.Button.ButtonClickedEvent();
-                button.onClick.AddListener(OnClick);
+                _titleOriginalPosition = title.rectTransform.anchoredPosition;
+                _titleOriginalSize = title.rectTransform.sizeDelta;
+                _titleOriginalWrapping = title.textWrappingMode;
+                _titleOriginalOverflow = title.overflowMode;
+                Plugin.Log.LogInfo(
+                    $"Storage title: font={title.fontSize:0.#} autoSize={title.enableAutoSizing} " +
+                    $"min={title.fontSizeMin:0.#} max={title.fontSizeMax:0.#} overflow={title.overflowMode} " +
+                    $"wrap={title.textWrappingMode} align={title.alignment} margin={title.margin} " +
+                    $"size={title.rectTransform.rect.size} parentIsHeader={title.transform.parent == sort.transform.parent}");
+            }
+            _parentHasLayoutGroup = sort.transform.parent.GetComponent<LayoutGroup>() != null;
+            _layoutWithAllowed = null;
+
+            // Order matters for a LayoutGroup: Sort, Stack allowed, Stack, Take all
+            _allowed = CreateButton(takeAll, "Stack allowed button", AllowedLabel, AllowedTooltipDetails, OnStackAllowedClick);
+            _stack = CreateButton(takeAll, "Stack button", StackLabel, StackTooltipDetails, OnStackClick);
+            if (_parentHasLayoutGroup)
+            {
+                int takeIndex = takeAll.transform.GetSiblingIndex();
+                _allowed.Rect.SetSiblingIndex(takeIndex);
+                _stack.Rect.SetSiblingIndex(takeIndex + 1);
+            }
+        }
+
+        /// <summary>
+        /// Clones a vanilla button (Take all) so the new one looks identical. The clone is
+        /// made under an inactive holder, so none of its components run Awake/OnEnable
+        /// until savable components (Take all's Relay: GUID-based, saved, can fire
+        /// quest outputs) are removed; only then is it moved into the panel.
+        /// </summary>
+        private static PanelButton CreateButton(GameObject template, string name, string label, string tooltip,
+            UnityEngine.Events.UnityAction onClick)
+        {
+            var holder = new GameObject("InventoryTweaks clone holder");
+            holder.SetActive(false);
+            GameObject clone = Object.Instantiate(template, holder.transform, false);
+            clone.name = name;
+
+            foreach (SavableScript savable in clone.GetComponentsInChildren<SavableScript>(true))
+            {
+                Object.DestroyImmediate(savable);
             }
 
-            _label = _button.GetComponentInChildren<TextMeshProUGUI>(true);
-            if (_label != null)
+            clone.transform.SetParent(template.transform.parent, false);
+            Object.Destroy(holder);
+
+            // Fully qualified: the game has its own global "Button" type
+            UnityEngine.UI.Button button = clone.GetComponent<UnityEngine.UI.Button>();
+            if (button != null)
+            {
+                // Replace the cloned persistent "take all" listener
+                button.onClick = new UnityEngine.UI.Button.ButtonClickedEvent();
+                button.onClick.AddListener(onClick);
+            }
+
+            TextMeshProUGUI text = clone.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (text != null)
             {
                 // Make sure localization cannot overwrite our label
-                foreach (Component component in _label.GetComponents<Component>())
+                foreach (Component component in text.GetComponents<Component>())
                 {
                     if (component != null && component.GetType().Name.Contains("Locali"))
                     {
                         Object.Destroy(component);
                     }
                 }
-                _label.text = Label;
+                text.text = label;
             }
 
-            HintTooltip.Attach(_button, TooltipTitle, TooltipDetails);
+            HintTooltip.Attach(clone, label, tooltip);
 
-            Place(sort.GetComponent<RectTransform>(), takeAll.GetComponent<RectTransform>(),
-                _button.GetComponent<RectTransform>());
+            var result = new PanelButton
+            {
+                GameObject = clone,
+                Rect = clone.GetComponent<RectTransform>(),
+                Text = text,
+                Label = label
+            };
+            FitWidthToLabel(template, result);
+            return result;
         }
 
-        private static void Place(RectTransform sort, RectTransform takeAll, RectTransform stack)
+        /// <summary>
+        /// Take all is wide; shrink the clone to its own label (incl. the "+" suffix),
+        /// keeping the same horizontal padding Take all has around its text.
+        /// </summary>
+        private static void FitWidthToLabel(GameObject template, PanelButton button)
         {
-            Transform parent = sort.parent;
-            if (parent.GetComponent<LayoutGroup>() != null)
+            TextMeshProUGUI templateText = template.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (button.Text == null || templateText == null)
             {
-                int sortIndex = sort.GetSiblingIndex();
-                int takeIndex = takeAll.GetSiblingIndex();
-                stack.SetSiblingIndex(sortIndex < takeIndex ? takeIndex : sortIndex);
-                Plugin.Log.LogInfo("Stack button: placed by the parent's LayoutGroup");
                 return;
             }
+            float templateWidth = template.GetComponent<RectTransform>().rect.width;
+            // Take all's own padding is generous; cap it so the clones stay compact
+            float padding = Mathf.Clamp(templateWidth - templateText.GetPreferredValues(templateText.text).x, 16f, 30f);
+            float labelWidth = button.Text.GetPreferredValues(button.Label + BackpackSuffix).x;
+            float width = Mathf.Min(templateWidth, labelWidth + padding);
+            button.Rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+        }
 
-            float width = stack.rect.width;
+        private static string Describe(string name, RectTransform rect)
+        {
+            float left = rect.localPosition.x + rect.rect.xMin;
+            float right = rect.localPosition.x + rect.rect.xMax;
+            return $"{name}: x={rect.localPosition.x:0.#} [{left:0.#}..{right:0.#}] w={rect.rect.width:0.#} " +
+                   $"anchors={rect.anchorMin.x:0.##}-{rect.anchorMax.x:0.##} pivot={rect.pivot.x:0.##}";
+        }
+
+        /// <summary>
+        /// Lays out the header. Restores the vanilla positions first. With "Stack allowed"
+        /// the header always uses two rows (title on top, all buttons below); ordinary
+        /// containers keep a single row.
+        /// </summary>
+        private static void Layout(bool withAllowed)
+        {
+            if (_parentHasLayoutGroup)
+            {
+                return; // visibility alone is enough
+            }
+
+            RectTransform sort = _panel.sortButton.GetComponent<RectTransform>();
+            RectTransform takeAll = _panel.takeAllButton.GetComponent<RectTransform>();
+            TextMeshProUGUI title = TitleText(_panel);
+            sort.anchoredPosition = _sortOriginalPosition;
+            takeAll.anchoredPosition = _takeAllOriginalPosition;
+            if (title != null)
+            {
+                title.rectTransform.sizeDelta = _titleOriginalSize;
+                title.rectTransform.anchoredPosition = _titleOriginalPosition;
+                title.textWrappingMode = _titleOriginalWrapping;
+                title.overflowMode = _titleOriginalOverflow;
+            }
+
+            var buttons = new List<PanelButton>();
+            if (withAllowed)
+            {
+                buttons.Add(_allowed);
+            }
+            buttons.Add(_stack);
+
+            // Clones start at Take all's height (they may have been moved by the two-row layout)
+            float rowY = CenterY(takeAll);
+            foreach (PanelButton button in buttons)
+            {
+                MoveCenterY(button.Rect, rowY);
+            }
+
+            if (withAllowed)
+            {
+                TwoRowLayout(sort, takeAll, title, buttons);
+                return;
+            }
+            SingleRowLayout(sort, takeAll, buttons);
+        }
+
+        /// <summary>
+        /// Containers with "Stack allowed" (4 buttons): buttons in the bottom row, the title
+        /// gets the whole top row (its rect is resized; the game's text auto-sizing fits it).
+        /// </summary>
+        private static void TwoRowLayout(RectTransform sort, RectTransform takeAll, TextMeshProUGUI title,
+            List<PanelButton> buttons)
+        {
+            var parent = (RectTransform)sort.parent;
+            float rowHeight = takeAll.rect.height;
+
+            // Bottom row: buttons
+            float rowY = parent.rect.yMin + RowPadding + rowHeight / 2f;
+
+            // Top row: the rest of the header, full width from the title's left edge
+            if (title != null)
+            {
+                RectTransform rect = title.rectTransform;
+                float titleTop = parent.rect.yMax - RowPadding;
+                float titleBottom = rowY + rowHeight / 2f + RowPadding;
+                float titleLeft = HeaderX(rect, rect.rect.xMin);
+                float titleRight = parent.rect.xMax - RowPadding;
+                SetHeaderRect(rect, titleLeft, titleRight, titleBottom, titleTop);
+                // One line, never truncated: with the vanilla overflow mode a line taller
+                // than the (now shorter) rect is not drawn at all
+                title.textWrappingMode = TextWrappingModes.NoWrap;
+                title.overflowMode = TextOverflowModes.Overflow;
+            }
+            MoveCenterY(takeAll, rowY);
+            MoveCenterY(sort, rowY);
+
+            // The row is free now: pack from Take all to the left, Sort last
+            float right = takeAll.localPosition.x + takeAll.rect.xMin - Margin;
+            for (int i = buttons.Count - 1; i >= 0; i--)
+            {
+                right = PlaceRightEdge(buttons[i].Rect, right) - Margin;
+                MoveCenterY(buttons[i].Rect, rowY);
+            }
+            PlaceRightEdge(sort, right);
+
+            LogLayout("two rows", sort, takeAll, buttons, gap: 0f, needed: 0f);
+            if (title != null)
+            {
+                Plugin.Log.LogInfo("  " + Describe("title", title.rectTransform) +
+                                   $" h={title.rectTransform.rect.height:0.#}");
+            }
+        }
+
+        /// <summary>X in the header's space of a point given in the rect's own local space.</summary>
+        private static float HeaderX(RectTransform rect, float localX)
+        {
+            Transform header = _panel.sortButton.transform.parent;
+            return header.InverseTransformPoint(rect.TransformPoint(new Vector3(localX, 0f, 0f))).x;
+        }
+
+        /// <summary>
+        /// Resizes and moves a rect to the given box in the header's space (works for any
+        /// anchors/pivot and for a rect whose parent is not the header).
+        /// </summary>
+        private static void SetHeaderRect(RectTransform rect, float left, float right, float bottom, float top)
+        {
+            Transform header = _panel.sortButton.transform.parent;
+            // Header units → rect parent units (scale only)
+            Vector3 size = rect.parent.InverseTransformVector(header.TransformVector(new Vector3(right - left, top - bottom, 0f)));
+            rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, Mathf.Abs(size.x));
+            rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Abs(size.y));
+
+            // Move so the rect's center lands on the box center
+            Vector3 currentCenter = header.InverseTransformPoint(rect.TransformPoint(rect.rect.center));
+            var delta = new Vector3((left + right) / 2f - currentCenter.x, (bottom + top) / 2f - currentCenter.y, 0f);
+            Vector3 local = rect.parent.InverseTransformVector(header.TransformVector(delta));
+            rect.anchoredPosition += new Vector2(local.x, local.y);
+        }
+
+        /// <summary>Moves a rect so its right edge is at x (parent space); returns its new left edge.</summary>
+        private static float PlaceRightEdge(RectTransform rect, float x)
+        {
+            float currentRight = rect.localPosition.x + rect.rect.xMax;
+            rect.anchoredPosition += new Vector2(x - currentRight, 0f);
+            return x - rect.rect.width;
+        }
+
+        /// <summary>Vertical center of a rect in the header's (Sort's parent) space.</summary>
+        private static float CenterY(RectTransform rect)
+        {
+            Transform header = _panel.sortButton.transform.parent;
+            return header.InverseTransformPoint(rect.TransformPoint(rect.rect.center)).y;
+        }
+
+        /// <summary>Moves a rect vertically so its center is at y in the header's space.</summary>
+        private static void MoveCenterY(RectTransform rect, float y)
+        {
+            Transform header = _panel.sortButton.transform.parent;
+            float delta = y - CenterY(rect);
+            // Convert the header-space delta into the rect's own parent space
+            Vector3 local = rect.parent.InverseTransformVector(header.TransformVector(new Vector3(0f, delta, 0f)));
+            rect.anchoredPosition += new Vector2(0f, local.y);
+        }
+
+        /// <summary>
+        /// Places the extra buttons as a group between Sort and Take all; if the gap is too
+        /// small, Sort is moved left by the missing amount.
+        /// </summary>
+        private static void SingleRowLayout(RectTransform sort, RectTransform takeAll, List<PanelButton> buttons)
+        {
+            float groupWidth = (buttons.Count - 1) * Margin;
+            foreach (PanelButton button in buttons)
+            {
+                groupWidth += button.Rect.rect.width;
+            }
             float sortRight = sort.localPosition.x + sort.rect.xMax;
             float takeLeft = takeAll.localPosition.x + takeAll.rect.xMin;
             float gap = takeLeft - sortRight;
-            float needed = width + 2f * Margin;
+            float needed = groupWidth + 2f * Margin;
 
-            Plugin.Log.LogInfo(
-                $"Stack button layout: sort x={sort.localPosition.x} w={sort.rect.width}, " +
-                $"takeAll x={takeAll.localPosition.x} w={takeAll.rect.width}, gap={gap}, needed={needed}");
-
-            float center;
+            float groupLeft;
             if (gap >= needed)
             {
-                center = (sortRight + takeLeft) / 2f;
+                groupLeft = sortRight + (gap - groupWidth) / 2f;
             }
             else
             {
-                // Not enough room: move Sort left by the missing amount
                 float shift = needed - gap;
                 sort.anchoredPosition -= new Vector2(shift, 0f);
                 sortRight -= shift;
-                center = sortRight + Margin + width / 2f;
+                groupLeft = sortRight + Margin;
             }
 
-            // Clone shares Sort's anchors and pivot, so a local delta equals an anchored delta
-            float pivotX = center - stack.rect.center.x;
-            stack.anchoredPosition = sort.anchoredPosition + new Vector2(pivotX - sort.localPosition.x, 0f);
+            float left = groupLeft;
+            foreach (PanelButton button in buttons)
+            {
+                RectTransform rect = button.Rect;
+                float center = left + rect.rect.width / 2f;
+                // Same parent, fixed anchors: a localPosition delta equals an anchoredPosition delta,
+                // so this works whatever anchors the cloned button has
+                float pivotX = center - rect.rect.center.x;
+                rect.anchoredPosition += new Vector2(pivotX - rect.localPosition.x, 0f);
+                left += rect.rect.width + Margin;
+            }
+
+            LogLayout("single row", sort, takeAll, buttons, gap, needed);
         }
 
-        /// <summary>Called every frame: "Stack+" while Shift is held.</summary>
-        public static void UpdateLabel()
+        private static void LogLayout(string mode, RectTransform sort, RectTransform takeAll,
+            List<PanelButton> buttons, float gap, float needed)
         {
-            if (_label == null || !_button.activeInHierarchy)
+            var parentRect = (RectTransform)sort.parent;
+            string log = $"Stack buttons layout ({buttons.Count}, {mode}): parent w={parentRect.rect.width:0.#} " +
+                         $"h={parentRect.rect.height:0.#}, gap={gap:0.#}, needed={needed:0.#}\n  " +
+                         Describe("sort", sort) + "\n  " + Describe("takeAll", takeAll);
+            foreach (PanelButton button in buttons)
+            {
+                log += "\n  " + Describe(button.GameObject.name, button.Rect);
+            }
+            Plugin.Log.LogInfo(log);
+        }
+
+        /// <summary>
+        /// Called every frame: visibility (follows Take all, which vanilla hides in trade;
+        /// Stack allowed only for filtered containers), layout and the "+" labels.
+        /// </summary>
+        public static void UpdateButtons()
+        {
+            if (_panel == null || _stack == null || _stack.GameObject == null || _panel.takeAllButton == null)
             {
                 return;
             }
-            string text = ShiftHeld ? LabelWithBackpack : Label;
-            if (_label.text != text)
+
+            bool visible = _panel.takeAllButton.activeSelf;
+            bool withAllowed = visible && HasAllowedFilter(CurrentStorage(_panel));
+            if (_stack.GameObject.activeSelf != visible)
             {
-                _label.text = text;
+                _stack.GameObject.SetActive(visible);
+            }
+            if (_allowed.GameObject.activeSelf != withAllowed)
+            {
+                _allowed.GameObject.SetActive(withAllowed);
+            }
+            if (_layoutWithAllowed != withAllowed)
+            {
+                _layoutWithAllowed = withAllowed;
+                Layout(withAllowed);
+            }
+
+            string suffix = ShiftHeld ? BackpackSuffix : "";
+            SetLabel(_stack, suffix);
+            SetLabel(_allowed, suffix);
+        }
+
+        private static void SetLabel(PanelButton button, string suffix)
+        {
+            if (button.Text == null || !button.GameObject.activeInHierarchy)
+            {
+                return;
+            }
+            string text = button.Label + suffix;
+            if (button.Text.text != text)
+            {
+                button.Text.text = text;
             }
         }
 
-        private static void OnClick()
+        private static bool HasAllowedFilter(Storage storage)
         {
-            StoragePanelUI panel = _panel;
-            if (panel == null || TradePanel.instance.activeTrade != null)
-            {
-                return;
-            }
-            Storage storage = CurrentStorage(panel);
-            if (storage == null || storage.Slots == null)
-            {
-                return;
-            }
+            return storage != null && storage.AllowedCategories != null && storage.AllowedCategories.Length > 0;
+        }
 
-            SlotController[] targets = storage.Slots;
-            HashSet<ItemKind> kinds = KindsIn(targets);
+        private static void OnStackClick()
+        {
+            if (!TryGetStorage(out StoragePanelUI panel, out Storage storage))
+            {
+                return;
+            }
+            HashSet<ItemKind> kinds = KindsIn(storage.Slots);
             if (kinds.Count == 0)
             {
                 return;
             }
+            MoveIntoStorage(panel, storage, source => kinds.Contains(ItemKind.Of(source.itemStack)));
+        }
 
+        private static void OnStackAllowedClick()
+        {
+            if (!TryGetStorage(out StoragePanelUI panel, out Storage storage) || !HasAllowedFilter(storage))
+            {
+                return;
+            }
+            // Same category check as SlotController.AddItem (filter + default forbidden categories)
+            SlotController filter = storage.Slots.Length > 0 ? storage.Slots[0] : null;
+            if (filter == null)
+            {
+                return;
+            }
+            MoveIntoStorage(panel, storage, source =>
+            {
+                Item item = GetItem(source.itemStack);
+                return item != null && filter.CheckIfAllowed(item);
+            });
+        }
+
+        private static bool TryGetStorage(out StoragePanelUI panel, out Storage storage)
+        {
+            panel = _panel;
+            storage = null;
+            if (panel == null || TradePanel.instance.activeTrade != null)
+            {
+                return false;
+            }
+            storage = CurrentStorage(panel);
+            return storage != null && storage.Slots != null;
+        }
+
+        private static void MoveIntoStorage(StoragePanelUI panel, Storage storage, System.Func<SlotController, bool> shouldMove)
+        {
             bool movedAny = false;
             bool leftOver = false;
             foreach (SlotController source in GetSources(storage, ShiftHeld))
             {
-                if (!ItemKind.HasItem(source) || !kinds.Contains(ItemKind.Of(source.itemStack)))
+                if (!ItemKind.HasItem(source) || !shouldMove(source))
                 {
                     continue;
                 }
-                int moved = MoveToContainer(source, targets);
-                movedAny |= moved > 0;
+                movedAny |= MoveToContainer(source, storage.Slots) > 0;
                 leftOver |= ItemKind.HasItem(source);
             }
 
@@ -200,6 +528,15 @@ namespace InventoryTweaks.Patches
             {
                 panel.StorageFull();
             }
+        }
+
+        private static Item GetItem(ItemStack stack)
+        {
+            if (stack.itemReference == null)
+            {
+                stack.SetItemReference();
+            }
+            return stack.itemReference?.Item;
         }
 
         /// <summary>Kinds (item + liquid) of everything in the given slots.</summary>

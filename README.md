@@ -16,6 +16,9 @@ inventory screens.
   every type already in the container from your inventory into it
 - **Stack+** (Shift + Click on the Stack button): the same, also taking from
   your backpack
+- **Stack allowed** (for containers that accept specific items, e.g. a bottle crate):
+  move every item the container accepts from your inventory into it;
+  Shift + Click also takes from your backpack
 - **Take similar** (Alt + Click on the Take all button): take from the
   container only the item types you already have in your inventory
 

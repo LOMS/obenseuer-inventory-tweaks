@@ -229,8 +229,11 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
 - UI (Unity Explorer): `.../Inventory Panel/Other panels/Storage Panel/Storage Info/`
   contains `Sort button` (local x 98, children `ButtonText`, `Audio Press`) and
   `Take all` (local x 271, child `Button Normal Text`, has a `Relay`).
-- Postfix on `StoragePanelUI.OnEnable`: once, clone **Sort** (Take all's `Relay` is a
-  savable GUID object) next to it, replace `onClick` with a new event, label
+- Postfix on `StoragePanelUI.OnEnable`: once, clone **Take all** (so the buttons look
+  the same). The clone is instantiated under an inactive holder (no Awake/OnEnable),
+  every `SavableScript` on it (Take all's `Relay`: GUID-based, saved, fires quest
+  outputs) is removed with `DestroyImmediate`, then it is moved into the panel.
+  Replace `onClick` with a new event, label
   "Stack" (localization components on the label removed), own
   `StackButtonTooltip` (game `ToolTip.instance.Activate(title, details)`; the game's
   `ToolTipInfo` NREs without a sound set). Visibility follows `takeAllButton`
@@ -244,7 +247,28 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   into same-id slots, then empty slots (skip `noDrop`); source shrunk like
   `MoveToOtherInventory`. Then `storageChanged = true`, take-all sound once,
   `StorageFull()` once if something stayed behind.
-- Label "Stack+" while Shift is held (`Plugin.LateUpdate`).
+- Label "Stack+" while Shift is held (`Plugin.LateUpdate` → `StackButton.UpdateButtons`).
+- "Stack allowed" (second clone of Take all, left of Stack): visible only when the open
+  storage has `Storage.AllowedCategories` (non-empty; entries are categories,
+  `_item_<title>` or `_meta_<type>`; a forbidden-only filter does not count).
+  Moves every source item for which `storage.Slots[0].CheckIfAllowed(item)` is true
+  (same check `SlotController.AddItem` uses: allowed + forbidden + default forbidden
+  `Storage`/`Unstorable`; meta-based rules are not evaluated there). Shift adds the
+  backpack ("Stack allowed+"). Layout is recomputed for 1 or 2 buttons whenever the
+  visibility changes; Sort, Take all and the title are restored to their original
+  positions first.
+- Measured (log): header "Storage Info" w=582, pivot 0.5; Sort w=40 (round icon,
+  anchors/pivot 0.5) at x≈-9; Take all w=140, anchors 1, pivot 1, right edge 271;
+  gap between them only 13 px. Clones are shrunk to their label + ≤30 px padding.
+- Two-row header (only when Stack allowed is shown): title (`StoragePanelUI.storageName`,
+  private) centered in the top row, Sort / Stack allowed / Stack / Take all packed
+  right-to-left in the bottom row. Always used for such containers (user decision);
+  no height check. Measured: header h=77, button row h=37; the title rect is narrow
+  and its preferred height is 67 even as one line (auto-sized font), so instead of
+  measuring text, the title rect itself is resized to the top row (full width from
+  its left edge, height = header − row − paddings) and the game's auto-sizing fits
+  the text. Title `sizeDelta` and position are restored for ordinary containers. Vertical moves are done in
+  header space and converted to each rect's parent space.
 - Alt + Take all = "Take similar" (same file, `TakeSimilar`): Prefix on
   `StoragePanelUI.TakeAll` (skipped in trade). Item ids from `Inventory.Slots` only;
   moves matching container stacks into `Inventory.Slots` (same-id stacks, then free
