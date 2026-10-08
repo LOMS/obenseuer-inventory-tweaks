@@ -245,6 +245,13 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   `MoveToOtherInventory`. Then `storageChanged = true`, take-all sound once,
   `StorageFull()` once if something stayed behind.
 - Label "Stack+" while Shift is held (`Plugin.LateUpdate`).
+- Alt + Take all = "Take similar" (same file, `TakeSimilar`): Prefix on
+  `StoragePanelUI.TakeAll` (skipped in trade). Item ids from `Inventory.Slots` only;
+  moves matching container stacks into `Inventory.Slots` (same-id stacks, then free
+  slots; backpack neither source of types nor target) via the shared
+  `StackButton.MoveToContainer`. `InventoryFull()` once if something stayed behind.
+  Label of the Take all button ("Button Normal Text") switched to "Take similar"
+  while Alt is held, original text restored on release.
 - Note: the game has a global `Button` type — use `UnityEngine.UI.Button`.
 
 ## Common limitations

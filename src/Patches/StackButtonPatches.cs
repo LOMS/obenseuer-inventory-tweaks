@@ -224,8 +224,11 @@ namespace InventoryTweaks.Patches
             }
         }
 
-        /// <summary>Moves one source stack into the container; returns the moved amount.</summary>
-        private static int MoveToContainer(SlotController source, SlotController[] targets)
+        /// <summary>
+        /// Moves one source stack into the target slots (same-item stacks first, then free
+        /// slots); returns the moved amount. Shared with "Take similar".
+        /// </summary>
+        internal static int MoveToContainer(SlotController source, SlotController[] targets)
         {
             ItemStack stack = source.itemStack;
             if (stack.itemReference == null)
@@ -279,6 +282,124 @@ namespace InventoryTweaks.Patches
                 source.slot?.UpdateSlot();
             }
             return moved;
+        }
+    }
+
+    /// <summary>
+    /// Alt + "Take all" = "Take similar": takes from the open container only the item
+    /// types already in the player's main inventory (backpack ignored), into the main
+    /// inventory — the reverse of "Stack".
+    /// </summary>
+    internal static class TakeSimilar
+    {
+        private const string Label = "Take similar";
+
+        private static readonly AccessTools.FieldRef<StoragePanelUI, Storage> CurrentStorage =
+            AccessTools.FieldRefAccess<StoragePanelUI, Storage>("currentStorage");
+
+        private static readonly AccessTools.FieldRef<StoragePanelUI, SoundInfo> TakeAllSound =
+            AccessTools.FieldRefAccess<StoragePanelUI, SoundInfo>("takeAllSound");
+
+        private static readonly AccessTools.FieldRef<Storage, bool> StorageChanged =
+            AccessTools.FieldRefAccess<Storage, bool>("storageChanged");
+
+        private static TextMeshProUGUI _label;
+        private static string _originalText;
+        private static bool _overridden;
+
+        public static bool AltHeld => Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+
+        /// <summary>Called every frame: "Take similar" on the Take all button while Alt is held.</summary>
+        public static void UpdateLabel()
+        {
+            StoragePanelUI panel = Inventory.instance != null ? Inventory.instance.storagePanelUI : null;
+            if (panel == null || panel.takeAllButton == null || !panel.takeAllButton.activeInHierarchy)
+            {
+                return;
+            }
+            if (_label == null)
+            {
+                _label = panel.takeAllButton.GetComponentInChildren<TextMeshProUGUI>(true);
+                _overridden = false;
+                if (_label == null)
+                {
+                    return;
+                }
+            }
+
+            if (AltHeld)
+            {
+                if (!_overridden)
+                {
+                    _originalText = _label.text;
+                    _overridden = true;
+                }
+                if (_label.text != Label)
+                {
+                    _label.text = Label;
+                }
+            }
+            else if (_overridden)
+            {
+                _overridden = false;
+                _label.text = _originalText;
+            }
+        }
+
+        public static void Run(StoragePanelUI panel)
+        {
+            Storage storage = CurrentStorage(panel);
+            if (storage == null || storage.Slots == null)
+            {
+                return;
+            }
+
+            SlotController[] targets = Inventory.instance.Slots;
+            var itemIds = new HashSet<int>();
+            foreach (SlotController target in targets)
+            {
+                if (target != null && target.itemStack.itemId != -1 && target.itemStack.itemAmount > 0)
+                {
+                    itemIds.Add(target.itemStack.itemId);
+                }
+            }
+
+            bool movedAny = false;
+            bool leftOver = false;
+            foreach (SlotController source in storage.Slots)
+            {
+                if (source == null || !itemIds.Contains(source.itemStack.itemId) || source.itemStack.itemAmount <= 0)
+                {
+                    continue;
+                }
+                movedAny |= StackButton.MoveToContainer(source, targets) > 0;
+                leftOver |= source.itemStack.itemId != -1 && source.itemStack.itemAmount > 0;
+            }
+
+            if (movedAny)
+            {
+                StorageChanged(storage) = true;
+                MiscAudioPlayer.PlaySound(TakeAllSound(panel));
+            }
+            if (leftOver)
+            {
+                Inventory.instance.inventoryPanelUI.InventoryFull();
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(StoragePanelUI), nameof(StoragePanelUI.TakeAll))]
+    internal static class TakeAllPatch
+    {
+        private static bool Prefix(StoragePanelUI __instance)
+        {
+            // Same guard as vanilla TakeAll; otherwise let vanilla run (and reject)
+            if (!TakeSimilar.AltHeld || TradePanel.instance.activeTrade != null)
+            {
+                return true;
+            }
+            TakeSimilar.Run(__instance);
+            return false;
         }
     }
 

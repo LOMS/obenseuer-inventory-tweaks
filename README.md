@@ -18,6 +18,10 @@ items of every type already in the container from your inventory into it,
 topping up existing stacks first, then free slots. **Shift + Click** ("Stack+")
 also takes them from your backpack.
 
+**Alt + Take all** ("Take similar"): the reverse of Stack — takes from the
+container only the item types you already have in your inventory (backpack
+not counted), into your inventory.
+
 Item actions with Shift held (the button label changes to show it):
 
 - **Shift + Break**: break the whole stack (bottles, jars, glass panes, ...)
