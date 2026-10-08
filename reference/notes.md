@@ -138,6 +138,32 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   confirmText, Action)`) exists but is only referenced by `ShopBaseUI.notification`
   (lives inside the shop UI). No generic dialog found.
 
+## Overflow to player inventory
+- `ItemConsumable.Invoke` spawns results via `ItemOperations.AddItemWithPermission`
+  → `ItemOperations.AddItems(item, amount, owner, meta, slot, notify, ignoreCrime)`
+  → `slot.AddItem` → `SlotController.AddItemAndReturnRemaining(dropItems: true)`
+  (target slot, then `Siblings`, then `ItemOperations.DropItem` on the ground).
+- Crafting: `CraftingBase.CreateItems(...)` (protected virtual, overridden by
+  `manufacturingProcess`) → `Storage.AddItem` (OutputStorage ?? InputOutputStorage)
+  → `Slots[0].AddItem(..., dropper: station)` → same `AddItemAndReturnRemaining(dropItems: true)`.
+  `CraftingBase.currentCraftingBase` / `manuActive` = the player has the station UI open
+  (set in `Enter()`, cleared in `Exit()`).
+- Harvest: gardens and animal cages are both `Growing : CraftingBase` (animals are
+  "plants"; `AnimalBreeder` only breeds). UI harvest = `Growing.Harvest()`
+  (`GrowingPanel.PressHarvestButton`) and `Growing.Harvest(GameObject)`
+  (`ProgressSlot` click) → private `Growing.CreateItems` → `Storage.AddItemToStorage` /
+  `Storage.AddItem` → `Slots[0].AddItem(..., overflowSpot)` → same drop path.
+  Harvest by interacting with a plant in the world (`grow.Interact` → `grow.Harvest`)
+  already adds straight to the player via `ItemOperations.AddItems(stack)`.
+- Mod: scopes = `ItemConsumable.Invoke` on an item in a non-player slot,
+  `CraftingBase.CreateItems` while `currentCraftingBase == this`, and both
+  `Growing.Harvest` overloads. Inside a scope,
+  `SlotController.AddItemAndReturnRemaining(dropItems: true)` on a container slot
+  adds without dropping, sends the remainder to
+  `ItemOperations.AddItemAndReturnRemaining(slot: null)` (player main slots,
+  character slots, backpack, stolen-item checks), then drops only what is left
+  (same dropper/position). `src\Patches\OverflowToPlayerPatches.cs`.
+
 ## User decisions (v0.3.0) — bulk actions
 - Shift + Break breaks the whole stack, for every stackable item with a "Break" action.
 - Shift + Slaughter slaughters all animals of the **same item ID** in the same

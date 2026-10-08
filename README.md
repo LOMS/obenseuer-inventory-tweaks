@@ -18,6 +18,13 @@ Item actions with Shift held (the button label changes to show it):
   inventory. The button turns into "Slaughter N?" — click again within 3 seconds
   to confirm. Your own cat is never included. Stops if you run out of axes.
 
+Results that don't fit into a container go to your inventory instead of
+falling on the ground:
+
+- item actions (Break, Slaughter, ...) used on an item inside a container;
+- crafting at a station while you have its window open;
+- harvesting a garden or an animal cage from its window.
+
 ## Installation
 Requires BepInEx 6 (Unity.Mono). Copy `InventoryTweaks.dll` to
 `<Obenseuer>\BepInEx\plugins\InventoryTweaks\`.
