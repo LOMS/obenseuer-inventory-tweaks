@@ -8,7 +8,8 @@ here; game code is not copied.
   6.0.0-be.788, 0Harmony 2.10.2 (HarmonyX). Built for .NET 3.5 (mscorlib 2.0).
 - `Obenseuer_Data\Managed`: Assembly-CSharp references mscorlib 4.0 and
   netstandard 2.1; UnityEngine.InputLegacyModule and Unity.InputSystem are present.
-- Plugin is deployed to `BepInEx\plugins\InventoryTweaks\` (v0.2.0).
+
+Sections 1–7 describe the game; "Mod design" at the end describes what the mod does.
 
 ## 1. Slot and item, mouse input
 - `Slot.cs` — `Slot : MonoBehaviour` + `IPointerDownHandler`, `IPointerClickHandler`,
@@ -78,7 +79,7 @@ here; game code is not copied.
 - Gamepad/keyboard: `InventoryNavigationHandler` (~1017) — the `"Move Item"` key (F)
   while storage is open.
 
-## 4. Existing indicator
+## 4. Existing indicator (not used by the mod; kept for reference)
 - `ItemData.progressIndicatorImage` (`[SerializeField] Image`) — hold progress fill
   (`fillAmount`), driven only by `HoldMove` and reset in `Deactivate()`.
 - `ItemData.progressIndicatorImage2` + `SetProgressIndicator2Value(float)` —
@@ -134,11 +135,14 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   `ItemInfo.UseItem(int index, bool secondaryButton)` has a ~0.33 s cooldown
   (skipped during trade), handles liquid children, then invokes `Actions[index]`
   and refreshes the panel.
+- Action sound: base `ItemAction.Invoke` plays `UseSound` via
+  `ItemInfo.PlaySound(AudioClip)` (`PlayOneShot`) — once per unit; no other
+  per-unit sounds on the Break/Slaughter path.
 - Confirmation UI: `ConfirmationNotification` (`ShowNotification(title, content,
   confirmText, Action)`) exists but is only referenced by `ShopBaseUI.notification`
   (lives inside the shop UI). No generic dialog found.
 
-## Overflow to player inventory
+## 7. Where produced items go (drop path)
 - `ItemConsumable.Invoke` spawns results via `ItemOperations.AddItemWithPermission`
   → `ItemOperations.AddItems(item, amount, owner, meta, slot, notify, ignoreCrime)`
   → `slot.AddItem` → `SlotController.AddItemAndReturnRemaining(dropItems: true)`
@@ -155,43 +159,48 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   `Storage.AddItem` → `Slots[0].AddItem(..., overflowSpot)` → same drop path.
   Harvest by interacting with a plant in the world (`grow.Interact` → `grow.Harvest`)
   already adds straight to the player via `ItemOperations.AddItems(stack)`.
-- Mod: scopes = `ItemConsumable.Invoke` on an item in a non-player slot,
-  `CraftingBase.CreateItems` while `currentCraftingBase == this`, and both
-  `Growing.Harvest` overloads. Inside a scope,
-  `SlotController.AddItemAndReturnRemaining(dropItems: true)` on a container slot
-  adds without dropping, sends the remainder to
+# Mod design (decisions agreed with the user)
+
+## A. Quick transfer — `src\Patches\ShiftClickPatches.cs`
+- Prefix on `ItemData.OnPointerDown`, instant, via `QuickMove`:
+  - Shift+LMB — whole stack; Shift+RMB — one item.
+  - Shift+Ctrl+LMB — every stack with the same `itemId` in `slotController.Siblings`
+    (each via its UI `ItemData.QuickMove`); stops at the first failed move (target
+    full) to avoid repeated "full" messages; one sound per click. Only for plain
+    storage transfer (`ForeignSlots != null`, no trade, no liquid storage, no bottle
+    recycling); otherwise acts as Shift+LMB. Shift+Ctrl+RMB = Shift+RMB.
+- With no storage open — same as vanilla (`QuickMove` equips the item).
+- Left Shift only. No progress indicator.
+- Vanilla Shift disabled: Transpiler on `ItemData.GetMoveMode` replaces
+  `Input.GetKey` with a version that ignores LeftShift. Vanilla Ctrl ("half") on
+  hold / double-click is unchanged.
+
+## B. Bulk item actions — `src\Patches\BulkActionPatches.cs`
+- Prefix on `ItemInfo.UseItem(int, bool)` (vanilla guards mirrored: buttons
+  enabled, no cooldown, no trade, no liquid child).
+- Shift+Break — repeats the action over the whole stack, for every stackable
+  item with a "Break" action.
+- Shift+Slaughter — all animals of the **same item ID** in the same container
+  (`SlotController.Siblings`); "Your Cat" (15650) is always excluded; stops when
+  `CanUse` fails (no axe). Confirmation: first click turns the button into
+  "Slaughter N?", a second click within 3 s confirms. One animal → plain vanilla.
+- Labels: while Shift is held the button shows "Break all" / "Slaughter all";
+  set via `ItemInfoPanel.buttonText` / `secondaryButtonText` (private,
+  FieldRefAccess) from `Plugin.LateUpdate`, restored when Shift is released.
+- Sounds: Prefix on `ItemInfo.PlaySound` during a bulk action lets the first
+  sound through and suppresses the rest; one more plays after `SecondSoundDelay`
+  (realtime) if anything was suppressed.
+
+## C. Overflow to player — `src\Patches\OverflowToPlayerPatches.cs`
+- Scopes (counter, closed in a Finalizer): `ItemConsumable.Invoke` on an item in
+  a non-player slot; `CraftingBase.CreateItems` while `currentCraftingBase == this`
+  (background crafting keeps vanilla); both `Growing.Harvest` overloads.
+- Inside a scope, `SlotController.AddItemAndReturnRemaining(dropItems: true)` on a
+  container slot adds without dropping, sends the remainder to
   `ItemOperations.AddItemAndReturnRemaining(slot: null)` (player main slots,
   character slots, backpack, stolen-item checks), then drops only what is left
-  (same dropper/position). `src\Patches\OverflowToPlayerPatches.cs`.
+  (same dropper/position).
 
-## Shift + Ctrl + LMB — move all of a type
-- In `ShiftClickPatch` (`ItemData.OnPointerDown` prefix): for every slot in
-  `slotController.Siblings` with the same `itemId`, call `QuickMove(amount)` on its
-  UI `ItemData`; stop at the first failed move (target full) to avoid repeated
-  "full" messages; one sound per click.
-- Only for plain storage transfer (`ForeignSlots != null`, no trade, no liquid
-  storage, no bottle recycling); otherwise it acts as Shift + LMB.
-- Shift + Ctrl + RMB = Shift + RMB (one item). Vanilla Ctrl ("half") on hold /
-  double-click is unchanged.
-
-## User decisions (v0.3.0) — bulk actions
-- Shift + Break breaks the whole stack, for every stackable item with a "Break" action.
-- Shift + Slaughter slaughters all animals of the **same item ID** in the same
-  container (`SlotController.Siblings`); "Your Cat" (15650) is always excluded.
-- Confirmation: option A — first click turns the button into "Slaughter N?",
-  a second click within 3 s confirms. If only one animal, plain vanilla slaughter.
-- While Shift is held the button label shows "Break all" / "Slaughter all".
-- Implementation: `src\Patches\BulkActionPatches.cs` — Prefix on
-  `ItemInfo.UseItem(int, bool)`; labels via `ItemInfoPanel.buttonText` /
-  `secondaryButtonText` (private, FieldRefAccess), refreshed from `Plugin.LateUpdate`.
-- Slots without a UI `ItemData` (not displayed) are skipped.
-
-## User decisions (v0.2.0)
-- No circular indicator.
-- Shift+LMB — whole stack, Shift+RMB — one item, instantly, via `QuickMove`.
-- Vanilla Shift ("move one" in `GetMoveMode`) is disabled.
-- With no storage open — same as vanilla (`QuickMove` equips the item).
-- Left Shift only.
-- Implementation: `src\Patches\ShiftClickPatches.cs` — Prefix on `ItemData.OnPointerDown`,
-  Transpiler on `ItemData.GetMoveMode` (replaces `Input.GetKey` with a version that
-  ignores LeftShift).
+## Common limitations
+- Bulk operations (B, Shift+Ctrl in A) need the item's UI `ItemData`; slots that
+  are not displayed are skipped.
