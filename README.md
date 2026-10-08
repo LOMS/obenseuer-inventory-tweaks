@@ -1,46 +1,56 @@
 # Inventory Tweaks
 
-A BepInEx 6 mod for Obenseuer that adds quick item transfer between inventories
-(e.g. backpack ↔ storage):
+A BepInEx 6 mod for Obenseuer that adds quality-of-life features to the game's
+inventory screens.
 
-- **Shift + Left Click**: move the whole stack
-- **Shift + Right Click**: move one item
-- **Shift + Ctrl + Left Click**: move every stack of that item from the same
-  inventory (only when a storage is open; in trade it works like Shift + Click)
+## Features
 
-Moves are instant and follow the game's usual rules (stack limits, allowed
-categories, trading). With no storage open, Shift + Click equips the item, like
-a vanilla double-click. Vanilla Shift behavior ("move one" on hold or
-double-click) is replaced.
+**Quick transfer between inventories** (e.g. inventory ↔ storage)
+- **Move stack** (Shift + Left Click): move the whole stack
+- **Move one** (Shift + Right Click): move a single item
+- **Move all of a kind** (Shift + Ctrl + Left Click): move every stack of that
+  item from the same inventory
 
-**Stack** button in the storage window (between Sort and Take all): moves
-items of every type already in the container from your inventory into it,
-topping up existing stacks first, then free slots. **Shift + Click** ("Stack+")
-also takes them from your backpack.
+**Storage window buttons**
+- **Stack** (new button between the Sort and Take all buttons): move items of
+  every type already in the container from your inventory into it
+- **Stack+** (Shift + Click on the Stack button): the same, also taking from
+  your backpack
+- **Take similar** (Alt + Click on the Take all button): take from the
+  container only the item types you already have in your inventory
 
-**Alt + Take all** ("Take similar"): the reverse of Stack — takes from the
-container only the item types you already have in your inventory (backpack
-not counted), into your inventory.
+**Bulk item actions**
+- **Break all** (Shift + Click on the Break button): break the whole stack
+  (bottles, jars, glass panes, ...)
+- **Slaughter all** (Shift + Click on the Slaughter button): slaughter every
+  animal of the same kind in the same inventory, with a confirmation click
 
-Item actions with Shift held (the button label changes to show it):
+**No items on the floor**: when a container is full, results go to your
+inventory instead of falling on the ground — for item actions used inside a
+container, crafting at a station and harvesting a garden or an animal cage.
 
-- **Shift + Break**: break the whole stack (bottles, jars, glass panes, ...)
-- **Shift + Slaughter**: slaughter every animal of the same kind in the same
-  inventory. The button turns into "Slaughter N?" — click again within 3 seconds
-  to confirm. Your own cat is never included. Stops if you run out of axes.
+## Details
 
-Results that don't fit into a container go to your inventory instead of
-falling on the ground:
-
-- item actions (Break, Slaughter, ...) used on an item inside a container;
-- crafting at a station while you have its window open;
-- harvesting a garden or an animal cage from its window.
-
-Every button with extra behavior shows a tooltip on hover describing it.
-
-## License
-[MIT](LICENSE)
+- All moves and actions go through the game's own logic, so the usual rules
+  still apply: stack limits, allowed categories, required tools, trading.
+- Vanilla Shift behavior ("move one" on hold or double-click) is replaced by the
+  shortcuts above. Ctrl ("half the stack") on hold or double-click is unchanged.
+- With no storage open, Move stack equips the item, like a vanilla double-click.
+- Move all of a kind works only with a storage open; in trade it moves just the
+  clicked stack, so it never sells or buys everything at once.
+- Stack and Take similar top up existing stacks first, then use free slots.
+  Take similar ignores the backpack: it neither counts its items nor puts
+  anything there.
+- Slaughter all: the button turns into "Slaughter N?" — click again within
+  3 seconds to confirm. Your own cat is never included. Stops when you run out
+  of axes. Repeated action sounds are collapsed into one or two.
+- Crafting results go to your inventory only while the station's window is
+  open; background crafting keeps the vanilla behavior. Anything that fits
+  nowhere still drops at the usual spot.
 
 ## Installation
 Requires BepInEx 6 (Unity.Mono). Copy `InventoryTweaks.dll` to
 `<Obenseuer>\BepInEx\plugins\InventoryTweaks\`.
+
+## License
+[MIT](LICENSE)
