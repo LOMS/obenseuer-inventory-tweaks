@@ -106,6 +106,50 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
 - Conclusion: reuse `ItemData.QuickMove(amount)` so all checks are preserved
   automatically.
 
+## 6. Item actions (Break / Slaughter)
+- Item definitions are data-driven: `<GameDir>\Obenseuer_Data\StreamingAssets\Items.json`
+  (loaded by `ItemDatabase`, FullSerializer). Read-only for us.
+- `Item.ItemAction` (`Item.cs`) — base class: `Name` (button text, not localized),
+  `UseSound`, `virtual Invoke(ItemData, bool worlduse)`, `virtual CanUse(...)`.
+  `Item.Actions[]` — the item's actions; `Item.InvokeAction(itemData, action)`
+  redirects to trade if a trade is active, otherwise calls `action.Invoke`.
+- Both Break and Slaughter are `OS.Items.ItemConsumable` (`OS.Items\ItemConsumable.cs`):
+  - `Invoke`: base Invoke (sound, `OnItemConsumed`, special triggers, theft check),
+    `PlayerStats.UpdateValues`, then if `DestroyAfterUse` removes **one** item via
+    `ItemInfo.instance.RemoveItem(itemData)` → `slotController.TakeItem()`;
+    consumes `RequiredItems` via `Inventory.FindAndChangeItemAmmo(id, -1)` (tool
+    durability); spawns `ItemsToSpawn` into the same `SlotController`
+    (`ItemOperations.AddItemWithPermission`).
+  - `CanUse`: false if the player lacks `RequiredItems`.
+- Break items (Type `Container` / `None` / `PiggyBank`, stack 8 unless noted):
+  Empty Wine Bottle, Empty Glass Bottle, Empty Clear Glass Bottle, Small Glass
+  Bottle, Fancy Glass Bottle, Glass Flask, Mason Jar, Glass Pane (→ 3 shards),
+  Piggy Bank (stack 1), Cash Box (stack 1). Spawns Glass shards (ID 35030).
+- Slaughter items (Type `Slaughter`, all stack 1): Rat, Glowing rat, Chick (no
+  tool); Cat, Glowing Cat, Your Cat, Chicken, Pig (require "Axes" group, ID 19720).
+  Cats have two actions: `Pet` (index 0) and `Slaughter` (index 1).
+  **"Your Cat" (ID 15650) is the player's pet.**
+- UI: `ItemInfo` (singleton) + `ItemInfoPanel`. Only **two** action buttons:
+  `UseItem()` → `UseItem(0, false)`, `UseItemSecondary()` → `UseItem(1, true)`.
+  `ItemInfo.UseItem(int index, bool secondaryButton)` has a ~0.33 s cooldown
+  (skipped during trade), handles liquid children, then invokes `Actions[index]`
+  and refreshes the panel.
+- Confirmation UI: `ConfirmationNotification` (`ShowNotification(title, content,
+  confirmText, Action)`) exists but is only referenced by `ShopBaseUI.notification`
+  (lives inside the shop UI). No generic dialog found.
+
+## User decisions (v0.3.0) — bulk actions
+- Shift + Break breaks the whole stack, for every stackable item with a "Break" action.
+- Shift + Slaughter slaughters all animals of the **same item ID** in the same
+  container (`SlotController.Siblings`); "Your Cat" (15650) is always excluded.
+- Confirmation: option A — first click turns the button into "Slaughter N?",
+  a second click within 3 s confirms. If only one animal, plain vanilla slaughter.
+- While Shift is held the button label shows "Break all" / "Slaughter all".
+- Implementation: `src\Patches\BulkActionPatches.cs` — Prefix on
+  `ItemInfo.UseItem(int, bool)`; labels via `ItemInfoPanel.buttonText` /
+  `secondaryButtonText` (private, FieldRefAccess), refreshed from `Plugin.LateUpdate`.
+- Slots without a UI `ItemData` (not displayed) are skipped.
+
 ## User decisions (v0.2.0)
 - No circular indicator.
 - Shift+LMB — whole stack, Shift+RMB — one item, instantly, via `QuickMove`.

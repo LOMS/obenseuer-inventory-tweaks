@@ -6,7 +6,7 @@
   <PropertyGroup>
     <AssemblyName>InventoryTweaks</AssemblyName>
     <RootNamespace>InventoryTweaks</RootNamespace>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
 
     <!--
       The game runs on Unity Mono with mscorlib 4.0 (Assembly-CSharp references
@@ -68,6 +68,7 @@
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath></Reference>
     <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(ManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath></Reference>
     <Reference Include="UnityEngine.UI"><HintPath>$(ManagedDir)\UnityEngine.UI.dll</HintPath></Reference>
+    <Reference Include="Unity.TextMeshPro"><HintPath>$(ManagedDir)\Unity.TextMeshPro.dll</HintPath></Reference>
     <Reference Include="Assembly-CSharp"><HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath></Reference>
   </ItemGroup>
 

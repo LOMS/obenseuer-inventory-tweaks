@@ -26,6 +26,8 @@ Inventory UI mod: Shift+Click on an item moves it between inventories
 - `reference\notes.md` — research notes (committed)
 - `reference\decompiled\` — decompiled game code (NOT committed, do NOT copy into `src\`)
 - `tools\export-game-code.bat|.ps1` — refresh the decompiled code (requires `ilspycmd`)
+- `tools\build.bat`, `tools\deploy.bat` — shortcuts for the commands below
+  (deploy refuses to run while the game is running)
 
 ## Commands
 - Build: `dotnet build`
