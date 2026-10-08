@@ -254,6 +254,15 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   while Alt is held, original text restored on release.
 - Note: the game has a global `Button` type — use `UnityEngine.UI.Button`.
 
+## E. Tooltips — `src\HintTooltip.cs`
+- Own component (IPointerEnter/Exit → `ToolTip.instance.Activate(title, details)` /
+  `Deactivate()`); a provider delegate is asked on every hover, returning false
+  shows nothing. The game's `ToolTipInfo` is not used (NRE without a sound set).
+- Attached to: Stack button; Take all (Alt hint) in the `StoragePanelUI.OnEnable`
+  postfix; item action buttons `ItemInfoPanel.useButton` / `secondaryUseButton`
+  (private, attached lazily from `BulkActions.UpdateButtonLabels`) — shown only
+  when `BulkActions.GetKind` reports a bulk mode (Break / Slaughter).
+
 ## Common limitations
 - The Stack button is not reachable with a gamepad.
 - Bulk operations (B, Shift+Ctrl in A) need the item's UI `ItemData`; slots that

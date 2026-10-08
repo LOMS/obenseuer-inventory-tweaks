@@ -39,6 +39,8 @@ research and design decisions: `reference\notes.md`.
 
 ## Layout
 - `src\Plugin.cs` — entry point (Harmony `PatchAll`, per-frame button labels)
+- `src\HintTooltip.cs` — hover tooltip component (game `ToolTip`) used on every
+  button whose behavior the mod changes
 - Note: the game defines a global `Button` type; use `UnityEngine.UI.Button`.
 - `src\Patches\` — Harmony patches, one file per feature
 - `reference\notes.md` — research notes (committed)

@@ -36,6 +36,8 @@ falling on the ground:
 - crafting at a station while you have its window open;
 - harvesting a garden or an animal cage from its window.
 
+Every button with extra behavior shows a tooltip on hover describing it.
+
 ## License
 [MIT](LICENSE)
 

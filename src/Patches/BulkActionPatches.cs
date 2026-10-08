@@ -32,6 +32,12 @@ namespace InventoryTweaks.Patches
         private static readonly AccessTools.FieldRef<ItemInfoPanel, TextMeshProUGUI> SecondaryButtonText =
             AccessTools.FieldRefAccess<ItemInfoPanel, TextMeshProUGUI>("secondaryButtonText");
 
+        private static readonly AccessTools.FieldRef<ItemInfoPanel, GameObject> PrimaryButton =
+            AccessTools.FieldRefAccess<ItemInfoPanel, GameObject>("useButton");
+
+        private static readonly AccessTools.FieldRef<ItemInfoPanel, GameObject> SecondaryButton =
+            AccessTools.FieldRefAccess<ItemInfoPanel, GameObject>("secondaryUseButton");
+
         // Pending "Slaughter all" confirmation
         private static SlotController _pendingSlot;
         private static int _pendingItemId;
@@ -286,6 +292,47 @@ namespace InventoryTweaks.Patches
         }
 
         /// <summary>Called every frame (LateUpdate) to show bulk labels on the action buttons.</summary>
+        private static void EnsureTooltips(ItemInfoPanel panel)
+        {
+            GameObject primary = PrimaryButton(panel);
+            if (primary != null && primary.GetComponent<HintTooltip>() == null)
+            {
+                HintTooltip.Attach(primary, (out string title, out string details) => GetActionHint(0, out title, out details));
+            }
+            GameObject secondary = SecondaryButton(panel);
+            if (secondary != null && secondary.GetComponent<HintTooltip>() == null)
+            {
+                HintTooltip.Attach(secondary, (out string title, out string details) => GetActionHint(1, out title, out details));
+            }
+        }
+
+        /// <summary>Tooltip only for actions that have a bulk mode.</summary>
+        private static bool GetActionHint(int index, out string title, out string details)
+        {
+            title = null;
+            details = null;
+            ItemInfo info = ItemInfo.instance;
+            if (info == null)
+            {
+                return false;
+            }
+
+            switch (GetKind(info.ItemData, index))
+            {
+                case BulkKind.BreakAll:
+                    title = "Break";
+                    details = "Shift + Click: break the whole stack.";
+                    return true;
+                case BulkKind.SlaughterAll:
+                    title = "Slaughter";
+                    details = "Shift + Click: slaughter all animals of this kind in this inventory.\n" +
+                              "Click again within 3 seconds to confirm. Your own cat is never included.";
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         public static void UpdateButtonLabels()
         {
             ItemInfo info = ItemInfo.instance;
@@ -293,6 +340,8 @@ namespace InventoryTweaks.Patches
             {
                 return;
             }
+
+            EnsureTooltips(info.itemInfoPanel);
 
             ItemData itemData = info.ItemData;
             for (int index = 0; index < LabelOverridden.Length; index++)

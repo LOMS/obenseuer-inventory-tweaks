@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using HarmonyLib;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace InventoryTweaks.Patches
@@ -21,6 +20,10 @@ namespace InventoryTweaks.Patches
         private const string TooltipDetails =
             "Move items of the types already in this container from your inventory.\n" +
             "Shift + Click: also from your backpack.";
+        private const string TakeAllTooltipTitle = "Take all";
+        private const string TakeAllTooltipDetails =
+            "Take everything from this container.\n" +
+            "Alt + Click: take only the item types you already have in your inventory (backpack not counted).";
         private const float Margin = 8f;
 
         private static readonly AccessTools.FieldRef<StoragePanelUI, Storage> CurrentStorage =
@@ -49,6 +52,10 @@ namespace InventoryTweaks.Patches
             {
                 // Vanilla hides Take all during trade; follow it
                 _button.SetActive(panel.takeAllButton.activeSelf);
+            }
+            if (panel.takeAllButton != null && panel.takeAllButton.GetComponent<HintTooltip>() == null)
+            {
+                HintTooltip.Attach(panel.takeAllButton, TakeAllTooltipTitle, TakeAllTooltipDetails);
             }
         }
 
@@ -90,7 +97,7 @@ namespace InventoryTweaks.Patches
                 _label.text = Label;
             }
 
-            _button.AddComponent<StackButtonTooltip>().Set(TooltipTitle, TooltipDetails);
+            HintTooltip.Attach(_button, TooltipTitle, TooltipDetails);
 
             Place(sort.GetComponent<RectTransform>(), takeAll.GetComponent<RectTransform>(),
                 _button.GetComponent<RectTransform>());
@@ -400,48 +407,6 @@ namespace InventoryTweaks.Patches
             }
             TakeSimilar.Run(__instance);
             return false;
-        }
-    }
-
-    /// <summary>Shows the game's text tooltip while the pointer is over the button.</summary>
-    internal class StackButtonTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
-    {
-        private string _title;
-        private string _details;
-        private bool _shown;
-
-        public void Set(string title, string details)
-        {
-            _title = title;
-            _details = details;
-        }
-
-        public void OnPointerEnter(PointerEventData eventData)
-        {
-            if (ToolTip.instance != null)
-            {
-                ToolTip.instance.Activate(_title, _details);
-                _shown = true;
-            }
-        }
-
-        public void OnPointerExit(PointerEventData eventData)
-        {
-            Hide();
-        }
-
-        private void OnDisable()
-        {
-            Hide();
-        }
-
-        private void Hide()
-        {
-            if (_shown && ToolTip.instance != null)
-            {
-                ToolTip.instance.Deactivate();
-            }
-            _shown = false;
         }
     }
 
