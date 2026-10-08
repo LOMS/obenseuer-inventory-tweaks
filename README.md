@@ -27,6 +27,9 @@ falling on the ground:
 - crafting at a station while you have its window open;
 - harvesting a garden or an animal cage from its window.
 
+## License
+[MIT](LICENSE)
+
 ## Installation
 Requires BepInEx 6 (Unity.Mono). Copy `InventoryTweaks.dll` to
 `<Obenseuer>\BepInEx\plugins\InventoryTweaks\`.
