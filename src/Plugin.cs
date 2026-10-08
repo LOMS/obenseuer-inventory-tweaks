@@ -36,6 +36,7 @@ namespace InventoryTweaks
             try
             {
                 BulkActions.UpdateButtonLabels();
+                StackButton.UpdateLabel();
             }
             catch (Exception e)
             {

@@ -13,6 +13,11 @@ categories, trading). With no storage open, Shift + Click equips the item, like
 a vanilla double-click. Vanilla Shift behavior ("move one" on hold or
 double-click) is replaced.
 
+**Stack** button in the storage window (between Sort and Take all): moves
+items of every type already in the container from your inventory into it,
+topping up existing stacks first, then free slots. **Shift + Click** ("Stack+")
+also takes them from your backpack.
+
 Item actions with Shift held (the button label changes to show it):
 
 - **Shift + Break**: break the whole stack (bottles, jars, glass panes, ...)

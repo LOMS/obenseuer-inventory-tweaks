@@ -159,6 +159,30 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   `Storage.AddItem` → `Slots[0].AddItem(..., overflowSpot)` → same drop path.
   Harvest by interacting with a plant in the world (`grow.Interact` → `grow.Harvest`)
   already adds straight to the player via `ItemOperations.AddItems(stack)`.
+## 8. Storage panel buttons (for the "Stack" feature)
+- `StoragePanelUI.cs` (`Inventory.instance.storagePanelUI`): public `GameObject`
+  fields `takeAllButton`, `sortButton`; private `Storage currentStorage` (set in
+  `UpdateStoragePanelUI(Storage)`), private `SoundInfo takeAllSound`.
+  - `OnEnable`: during trade hides sort/take-all (shows wealth), otherwise shows them.
+  - `TakeAll()`: no trade + `currentStorage != null` → `Storage.TakeAll()` +
+    `MiscAudioPlayer.PlaySound(takeAllSound)`. The button's onClick is wired in the
+    prefab (persistent listener), not in code.
+- `Storage.TakeAll()`: for every slot (reversed) → `MoveToInventory(out _, amount)`.
+- Gamepad navigation knows the take-all button explicitly
+  (`InventoryNavigationMovement.storageTakeAllButton`); a new button would not be
+  reachable with a gamepad.
+- Player inventory: `Inventory.Slots` (main grid, `Siblings = Slots`),
+  `Inventory.CharacterSlots` (clothes panel), backpack =
+  `BackpackStorage.instance.GetStorage()` (a separate `Storage`);
+  `Inventory.AllSlots(ignoreBackpack, ignoreCharacterSlots)` combines them.
+- Moving into a specific slot without dropping: `SlotController.AddItem(item, ref
+  remaining, owner, meta, isSibling: true, onlycheck: false, ..., stackAmount)`
+  (runs `OnDroppedCheck`, `CheckIfAllowed`, `ItemStack.AddItemToPanel`); vanilla
+  `MoveToOtherInventory` then shrinks the source stack and calls `RemoveItem()` /
+  `slot.UpdateSlot()`.
+- Layout of the buttons (parent, LayoutGroup, label component, localization)
+  is in the prefab — to be checked in Unity Explorer.
+
 # Mod design (decisions agreed with the user)
 
 ## A. Quick transfer — `src\Patches\ShiftClickPatches.cs`
@@ -201,6 +225,29 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   character slots, backpack, stolen-item checks), then drops only what is left
   (same dropper/position).
 
+## D. "Stack" button — `src\Patches\StackButtonPatches.cs`
+- UI (Unity Explorer): `.../Inventory Panel/Other panels/Storage Panel/Storage Info/`
+  contains `Sort button` (local x 98, children `ButtonText`, `Audio Press`) and
+  `Take all` (local x 271, child `Button Normal Text`, has a `Relay`).
+- Postfix on `StoragePanelUI.OnEnable`: once, clone **Sort** (Take all's `Relay` is a
+  savable GUID object) next to it, replace `onClick` with a new event, label
+  "Stack" (localization components on the label removed), own
+  `StackButtonTooltip` (game `ToolTip.instance.Activate(title, details)`; the game's
+  `ToolTipInfo` NREs without a sound set). Visibility follows `takeAllButton`
+  (hidden in trade).
+- Placement: parent `LayoutGroup` → sibling index; otherwise center in the gap
+  between Sort and Take all, or shift Sort left if the gap is too small. Sizes are
+  logged once.
+- Click: item ids present in `currentStorage.Slots`; sources = `Inventory.Slots`,
+  with Shift also the backpack storage (unless it is the open storage); never
+  clothes. Per source slot: `SlotController.AddItem(ref remaining, isSibling: true)`
+  into same-id slots, then empty slots (skip `noDrop`); source shrunk like
+  `MoveToOtherInventory`. Then `storageChanged = true`, take-all sound once,
+  `StorageFull()` once if something stayed behind.
+- Label "Stack+" while Shift is held (`Plugin.LateUpdate`).
+- Note: the game has a global `Button` type — use `UnityEngine.UI.Button`.
+
 ## Common limitations
+- The Stack button is not reachable with a gamepad.
 - Bulk operations (B, Shift+Ctrl in A) need the item's UI `ItemData`; slots that
   are not displayed are skipped.

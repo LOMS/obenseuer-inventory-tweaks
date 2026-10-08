@@ -17,6 +17,9 @@ research and design decisions: `reference\notes.md`.
   actions in containers, crafting with the station UI open and harvesting from
   the garden / animal cage UI go to the player's inventory instead of the ground
   when the container is full.
+- "Stack" button in the storage panel (`src\Patches\StackButtonPatches.cs`):
+  moves items of the types already in the container from the inventory into it;
+  Shift+Click ("Stack+") also from the backpack; tooltip on hover.
 - All moves/actions reuse the game's own methods (`QuickMove`, `ItemAction.Invoke`,
   ...) so vanilla checks are never bypassed.
 
@@ -34,6 +37,7 @@ research and design decisions: `reference\notes.md`.
 
 ## Layout
 - `src\Plugin.cs` — entry point (Harmony `PatchAll`, per-frame button labels)
+- Note: the game defines a global `Button` type; use `UnityEngine.UI.Button`.
 - `src\Patches\` — Harmony patches, one file per feature
 - `reference\notes.md` — research notes (committed)
 - `reference\decompiled\` — decompiled game code (NOT committed, do NOT copy into `src\`)
