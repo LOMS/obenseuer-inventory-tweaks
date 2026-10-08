@@ -164,6 +164,16 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   character slots, backpack, stolen-item checks), then drops only what is left
   (same dropper/position). `src\Patches\OverflowToPlayerPatches.cs`.
 
+## Shift + Ctrl + LMB — move all of a type
+- In `ShiftClickPatch` (`ItemData.OnPointerDown` prefix): for every slot in
+  `slotController.Siblings` with the same `itemId`, call `QuickMove(amount)` on its
+  UI `ItemData`; stop at the first failed move (target full) to avoid repeated
+  "full" messages; one sound per click.
+- Only for plain storage transfer (`ForeignSlots != null`, no trade, no liquid
+  storage, no bottle recycling); otherwise it acts as Shift + LMB.
+- Shift + Ctrl + RMB = Shift + RMB (one item). Vanilla Ctrl ("half") on hold /
+  double-click is unchanged.
+
 ## User decisions (v0.3.0) — bulk actions
 - Shift + Break breaks the whole stack, for every stackable item with a "Break" action.
 - Shift + Slaughter slaughters all animals of the **same item ID** in the same

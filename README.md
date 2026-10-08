@@ -5,6 +5,8 @@ A BepInEx 6 mod for Obenseuer that adds quick item transfer between inventories
 
 - **Shift + Left Click**: move the whole stack
 - **Shift + Right Click**: move one item
+- **Shift + Ctrl + Left Click**: move every stack of that item from the same
+  inventory (only when a storage is open; in trade it works like Shift + Click)
 
 Moves are instant and follow the game's usual rules (stack limits, allowed
 categories, trading). With no storage open, Shift + Click equips the item, like
