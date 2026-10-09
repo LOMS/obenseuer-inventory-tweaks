@@ -12,14 +12,12 @@ inventory screens.
   item from the same inventory
 
 **Storage window buttons**
-- **Stack** (new button between the Sort and Take all buttons): move items of
-  every type already in the container from your inventory into it
-- **Stack+** (Shift + Click on the Stack button): the same, also taking from
-  your backpack
-- **Stack allowed** (Alt + Click on the Stack button, for containers that accept
-  specific items, e.g. a bottle crate): move every item the container accepts
-  from your inventory into it; Shift + Alt + Click also takes from your backpack
-- **Take similar** (Alt + Click on the Take all button): take from the
+- **Stack** (new button in storage inventory): top-up container with items from your inventory.
+  Moves items of every type already in the container from your inventory into it.
+- **Stack+** (Shift + Click on the Stack button): the same, also taking from your backpack
+- **Stack allowed** (Alt + Click on the Stack button) - for containers that accept specific items, e.g. a bottle crate or ore wagon.
+- **Stack allowed+** (Shift + Alt + Click on the Stack button) - Same, also takes from your backpack
+- **Take similar** (Alt + Click on the 'Take all' button): take from the
   container only the item types you already have in your inventory
 
 **Bulk item actions**
@@ -30,11 +28,11 @@ inventory screens.
 
 **Gardens and animal cages**
 - **Plant max** (Shift + Click on a recipe in the list): plant as many as
-  possible at once — no amount slider
+  possible in one click
 
-**No items on the floor**: when a container is full, results go to your
-inventory instead of falling on the ground — for item actions used inside a
-container, crafting at a station and harvesting a garden or an animal cage.
+**No items/rats/cats on the floor**: results go to your inventory before falling on the ground.
+Works for manual crafting, for breaking bottles inside bottle crates (does not accept glass),
+for taking rats/cats out of breeding room etc.
 
 ## Details
 
@@ -51,9 +49,8 @@ container, crafting at a station and harvesting a garden or an animal cage.
 - Stack and Take similar top up existing stacks first, then use free slots.
   Take similar ignores the backpack: it neither counts its items nor puts
   anything there.
-- Slaughter all: the button turns into "Slaughter N?" — click again within
-  3 seconds to confirm. Your own cat is never included. Stops when you run out
-  of axes. Repeated action sounds are collapsed into one or two.
+- Slaughter all: the button turns into "Slaughter N?" for confirmation — click again within
+  3 seconds to confirm. **Your own cat is never included**.
 - Crafting results go to your inventory only while the station's window is
   open; background crafting keeps the vanilla behavior. Anything that fits
   nowhere still drops at the usual spot.
