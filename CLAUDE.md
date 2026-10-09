@@ -20,10 +20,12 @@ research and design decisions: `reference\notes.md`.
 - "Stack" button in the storage panel (`src\Patches\StackButtonPatches.cs`):
   moves items of the types already in the container from the inventory into it;
   Shift+Click ("Stack+") also from the backpack; tooltip on hover.
-  "Stack allowed" (left of Stack, only for containers with `AllowedCategories`)
+  Alt + Click ("Stack allowed", only for containers with `AllowedCategories`)
   moves every item the container accepts.
   Alt + Take all ("Take similar") is the reverse: takes only the types already in
   the main inventory (same file).
+- Plant max (`src\Patches\PlantMaxPatches.cs`): Shift + Click on a recipe in a
+  garden / animal cage list plants as many as possible via `Growing.StartGrow`.
 - All moves/actions reuse the game's own methods (`QuickMove`, `ItemAction.Invoke`,
   ...) so vanilla checks are never bypassed.
 

@@ -7,11 +7,11 @@ using UnityEngine.UI;
 namespace InventoryTweaks.Patches
 {
     /// <summary>
-    /// Extra buttons in the storage panel, between "Sort" and "Take all":
+    /// Extra button in the storage panel, between "Sort" and "Take all":
     /// - "Stack": moves items of every kind already present in the open container
     ///   from the player's inventory into it (existing stacks first, then free slots);
-    /// - "Stack allowed" (only for containers with an allowed-categories filter):
-    ///   moves every item the container accepts.
+    /// - Alt + Click, "Stack allowed" (only for containers with an allowed-categories
+    ///   filter): moves every item the container accepts.
     /// Shift+Click also takes from the backpack ("Stack+" / "Stack allowed+").
     /// </summary>
     internal static class StackButton
@@ -21,8 +21,9 @@ namespace InventoryTweaks.Patches
             "Move items of the types already in this container from your inventory.\n" +
             "Shift + Click: also from your backpack.";
         private const string AllowedLabel = "Stack allowed";
-        private const string AllowedTooltipDetails =
-            "Move every item this container accepts from your inventory.\n" +
+        private const string FilteredTooltipDetails =
+            "Move items of the types already in this container from your inventory.\n" +
+            "Alt + Click: move every item this container accepts.\n" +
             "Shift + Click: also from your backpack.";
         private const string BackpackSuffix = "+";
         private const string TakeAllTooltipTitle = "Take all";
@@ -50,12 +51,10 @@ namespace InventoryTweaks.Patches
             public GameObject GameObject;
             public RectTransform Rect;
             public TextMeshProUGUI Text;
-            public string Label;
         }
 
         private static StoragePanelUI _panel;
         private static PanelButton _stack;
-        private static PanelButton _allowed;
         // Vanilla elements the layout may move; restored before every layout
         private static Vector2 _sortOriginalPosition;
         private static Vector2 _takeAllOriginalPosition;
@@ -67,6 +66,9 @@ namespace InventoryTweaks.Patches
         private static bool? _layoutWithAllowed;
 
         private static bool ShiftHeld => Input.GetKey(KeyCode.LeftShift);
+
+        /// <summary>Alt switches the button to "Stack allowed" in filtered containers.</summary>
+        private static bool AllowedMode(Storage storage) => TakeSimilar.AltHeld && HasAllowedFilter(storage);
 
         /// <summary>Creates the buttons once and refreshes their visibility.</summary>
         public static void OnPanelEnabled(StoragePanelUI panel)
@@ -111,15 +113,21 @@ namespace InventoryTweaks.Patches
             _parentHasLayoutGroup = sort.transform.parent.GetComponent<LayoutGroup>() != null;
             _layoutWithAllowed = null;
 
-            // Order matters for a LayoutGroup: Sort, Stack allowed, Stack, Take all
-            _allowed = CreateButton(takeAll, "Stack allowed button", AllowedLabel, AllowedTooltipDetails, OnStackAllowedClick);
-            _stack = CreateButton(takeAll, "Stack button", StackLabel, StackTooltipDetails, OnStackClick);
+            _stack = CreateButton(takeAll, "Stack button", StackLabel, OnStackClick);
             if (_parentHasLayoutGroup)
             {
-                int takeIndex = takeAll.transform.GetSiblingIndex();
-                _allowed.Rect.SetSiblingIndex(takeIndex);
-                _stack.Rect.SetSiblingIndex(takeIndex + 1);
+                // Order matters for a LayoutGroup: Sort, Stack, Take all
+                _stack.Rect.SetSiblingIndex(takeAll.transform.GetSiblingIndex());
             }
+        }
+
+        private static bool GetStackHint(out string title, out string details)
+        {
+            title = StackLabel;
+            details = _panel != null && HasAllowedFilter(CurrentStorage(_panel))
+                ? FilteredTooltipDetails
+                : StackTooltipDetails;
+            return true;
         }
 
         /// <summary>
@@ -128,7 +136,7 @@ namespace InventoryTweaks.Patches
         /// until savable components (Take all's Relay: GUID-based, saved, can fire
         /// quest outputs) are removed; only then is it moved into the panel.
         /// </summary>
-        private static PanelButton CreateButton(GameObject template, string name, string label, string tooltip,
+        private static PanelButton CreateButton(GameObject template, string name, string label,
             UnityEngine.Events.UnityAction onClick)
         {
             var holder = new GameObject("InventoryTweaks clone holder");
@@ -167,24 +175,21 @@ namespace InventoryTweaks.Patches
                 text.text = label;
             }
 
-            HintTooltip.Attach(clone, label, tooltip);
+            HintTooltip.Attach(clone, GetStackHint);
 
-            var result = new PanelButton
+            return new PanelButton
             {
                 GameObject = clone,
                 Rect = clone.GetComponent<RectTransform>(),
-                Text = text,
-                Label = label
+                Text = text
             };
-            FitWidthToLabel(template, result);
-            return result;
         }
 
         /// <summary>
-        /// Take all is wide; shrink the clone to its own label (incl. the "+" suffix),
+        /// Take all is wide; shrink the clone to its widest label (incl. the "+" suffix),
         /// keeping the same horizontal padding Take all has around its text.
         /// </summary>
-        private static void FitWidthToLabel(GameObject template, PanelButton button)
+        private static void FitWidthToLabel(GameObject template, PanelButton button, string label)
         {
             TextMeshProUGUI templateText = template.GetComponentInChildren<TextMeshProUGUI>(true);
             if (button.Text == null || templateText == null)
@@ -194,7 +199,7 @@ namespace InventoryTweaks.Patches
             float templateWidth = template.GetComponent<RectTransform>().rect.width;
             // Take all's own padding is generous; cap it so the clones stay compact
             float padding = Mathf.Clamp(templateWidth - templateText.GetPreferredValues(templateText.text).x, 16f, 30f);
-            float labelWidth = button.Text.GetPreferredValues(button.Label + BackpackSuffix).x;
+            float labelWidth = button.Text.GetPreferredValues(label + BackpackSuffix).x;
             float width = Mathf.Min(templateWidth, labelWidth + padding);
             button.Rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
         }
@@ -208,15 +213,17 @@ namespace InventoryTweaks.Patches
         }
 
         /// <summary>
-        /// Lays out the header. Restores the vanilla positions first. With "Stack allowed"
-        /// the header always uses two rows (title on top, all buttons below); ordinary
-        /// containers keep a single row.
+        /// Lays out the header. Restores the vanilla positions first. Filtered containers
+        /// (wide "Stack allowed" label on Alt) always use two rows (title on top, buttons
+        /// below); ordinary containers keep a single row.
         /// </summary>
         private static void Layout(bool withAllowed)
         {
+            // Fixed width for the widest label of this container, so Alt does not move anything
+            FitWidthToLabel(_panel.takeAllButton, _stack, withAllowed ? AllowedLabel : StackLabel);
             if (_parentHasLayoutGroup)
             {
-                return; // visibility alone is enough
+                return;
             }
 
             RectTransform sort = _panel.sortButton.GetComponent<RectTransform>();
@@ -232,12 +239,7 @@ namespace InventoryTweaks.Patches
                 title.overflowMode = _titleOriginalOverflow;
             }
 
-            var buttons = new List<PanelButton>();
-            if (withAllowed)
-            {
-                buttons.Add(_allowed);
-            }
-            buttons.Add(_stack);
+            var buttons = new List<PanelButton> { _stack };
 
             // Clones start at Take all's height (they may have been moved by the two-row layout)
             float rowY = CenterY(takeAll);
@@ -255,7 +257,7 @@ namespace InventoryTweaks.Patches
         }
 
         /// <summary>
-        /// Containers with "Stack allowed" (4 buttons): buttons in the bottom row, the title
+        /// Filtered containers: buttons in the bottom row, the title
         /// gets the whole top row (its rect is resized; the game's text auto-sizing fits it).
         /// </summary>
         private static void TwoRowLayout(RectTransform sort, RectTransform takeAll, TextMeshProUGUI title,
@@ -411,8 +413,8 @@ namespace InventoryTweaks.Patches
         }
 
         /// <summary>
-        /// Called every frame: visibility (follows Take all, which vanilla hides in trade;
-        /// Stack allowed only for filtered containers), layout and the "+" labels.
+        /// Called every frame: visibility (follows Take all, which vanilla hides in trade),
+        /// layout (depends on the container's filter) and the label (Alt / Shift).
         /// </summary>
         public static void UpdateButtons()
         {
@@ -422,14 +424,11 @@ namespace InventoryTweaks.Patches
             }
 
             bool visible = _panel.takeAllButton.activeSelf;
-            bool withAllowed = visible && HasAllowedFilter(CurrentStorage(_panel));
+            Storage storage = CurrentStorage(_panel);
+            bool withAllowed = visible && HasAllowedFilter(storage);
             if (_stack.GameObject.activeSelf != visible)
             {
                 _stack.GameObject.SetActive(visible);
-            }
-            if (_allowed.GameObject.activeSelf != withAllowed)
-            {
-                _allowed.GameObject.SetActive(withAllowed);
             }
             if (_layoutWithAllowed != withAllowed)
             {
@@ -437,21 +436,14 @@ namespace InventoryTweaks.Patches
                 Layout(withAllowed);
             }
 
-            string suffix = ShiftHeld ? BackpackSuffix : "";
-            SetLabel(_stack, suffix);
-            SetLabel(_allowed, suffix);
-        }
-
-        private static void SetLabel(PanelButton button, string suffix)
-        {
-            if (button.Text == null || !button.GameObject.activeInHierarchy)
+            if (_stack.Text == null || !_stack.GameObject.activeInHierarchy)
             {
                 return;
             }
-            string text = button.Label + suffix;
-            if (button.Text.text != text)
+            string text = (AllowedMode(storage) ? AllowedLabel : StackLabel) + (ShiftHeld ? BackpackSuffix : "");
+            if (_stack.Text.text != text)
             {
-                button.Text.text = text;
+                _stack.Text.text = text;
             }
         }
 
@@ -466,6 +458,11 @@ namespace InventoryTweaks.Patches
             {
                 return;
             }
+            if (AllowedMode(storage))
+            {
+                StackAllowed(panel, storage);
+                return;
+            }
             HashSet<ItemKind> kinds = KindsIn(storage.Slots);
             if (kinds.Count == 0)
             {
@@ -474,12 +471,8 @@ namespace InventoryTweaks.Patches
             MoveIntoStorage(panel, storage, source => kinds.Contains(ItemKind.Of(source.itemStack)));
         }
 
-        private static void OnStackAllowedClick()
+        private static void StackAllowed(StoragePanelUI panel, Storage storage)
         {
-            if (!TryGetStorage(out StoragePanelUI panel, out Storage storage) || !HasAllowedFilter(storage))
-            {
-                return;
-            }
             // Same category check as SlotController.AddItem (filter + default forbidden categories)
             SlotController filter = storage.Slots.Length > 0 ? storage.Slots[0] : null;
             if (filter == null)

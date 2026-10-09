@@ -183,6 +183,29 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
 - Layout of the buttons (parent, LayoutGroup, label component, localization)
   is in the prefab — to be checked in Unity Explorer.
 
+## 9. Planting in gardens / animal cages (for "plant max")
+- UI: `GrowingPanel.instance` → `growingPanelUI.recipeListUI` (`RecipeListUI`, shared
+  class with every crafting panel) + `recipeInfo` (`RecipeInfoUI`).
+- `RecipeListUI.UpdateRecipes(...)` → `CreateButton(...)`: instantiates one of three
+  prefabs via `UIListManager.AddPrefabToList` — `recipeButtonPrefab` (can craft),
+  `recipeButtonMissingIngredientsPrefab`, `recipeButtonDisabledPrefab` (not learned);
+  each has a `RecipeButton : DefaultUIButton` with `recipe`, `activeCraftingBase`,
+  `disabledButton` (= missing ingredients or disabled). `DestroyButtons()` clears the
+  list; the list is rebuilt on every `Growing.CheckItems()` (after each planting too).
+- Vanilla flow: click a recipe → `RecipeButton.ShowRecipe` → `RecipeInfoUI.ShowRecipe`
+  → `CraftingBase.SetSelectedRecipe(recipe)`, builds the "Plant" button
+  (`SetCreateButtonValues("Plant", growing, growing, "Grow")`, invoked through a Relay).
+  "Plant" is disabled when `disabledButton`, `!RecipeInfoUI.CheckModifiers(recipe,
+  modifiers)` or `craftingDisabled`.
+- `Growing.Grow()`: amount = min(`GetRecipeMultiplier(selectedRecipe)`,
+  `FreeGrowingSlotCount()` (private)) → `AmountSliderUI.GrowItems(...)` (slider if > 1)
+  → OK → `GrowingPanel.instance.ActiveManu.StartGrow(amount)`.
+- `Growing.StartGrow(int amount)` (public): needs a free spot; `RemoveItems(selectedRecipe,
+  ..., amount)`, plants into free `GrowingSlots` via `PlantExternal`, skill roll / gain,
+  then `CheckItems()` (rebuilds the list) and gamepad navigation refresh.
+- So "plant max" = `SetSelectedRecipe(recipe)` + `StartGrow(min(GetRecipeMultiplier,
+  free spots))`, with the same enable conditions as the vanilla Plant button.
+
 # Mod design (decisions agreed with the user)
 
 ## A. Quick transfer — `src\Patches\ShiftClickPatches.cs`
@@ -248,21 +271,25 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   `MoveToOtherInventory`. Then `storageChanged = true`, take-all sound once,
   `StorageFull()` once if something stayed behind.
 - Label "Stack+" while Shift is held (`Plugin.LateUpdate` → `StackButton.UpdateButtons`).
-- "Stack allowed" (second clone of Take all, left of Stack): visible only when the open
-  storage has `Storage.AllowedCategories` (non-empty; entries are categories,
-  `_item_<title>` or `_meta_<type>`; a forbidden-only filter does not count).
-  Moves every source item for which `storage.Slots[0].CheckIfAllowed(item)` is true
-  (same check `SlotController.AddItem` uses: allowed + forbidden + default forbidden
-  `Storage`/`Unstorable`; meta-based rules are not evaluated there). Shift adds the
-  backpack ("Stack allowed+"). Layout is recomputed for 1 or 2 buttons whenever the
-  visibility changes; Sort, Take all and the title are restored to their original
-  positions first.
+- "Stack allowed" = Alt + Stack (user decision: one button instead of two; was a
+  separate clone before). Only when the open storage has `Storage.AllowedCategories`
+  (non-empty; entries are categories, `_item_<title>` or `_meta_<type>`; a
+  forbidden-only filter does not count); elsewhere Alt does nothing to Stack. The
+  label changes to "Stack allowed" while Alt is held (Alt also turns Take all into
+  "Take similar"). Moves every source item for which
+  `storage.Slots[0].CheckIfAllowed(item)` is true (same check `SlotController.AddItem`
+  uses: allowed + forbidden + default forbidden `Storage`/`Unstorable`; meta-based
+  rules are not evaluated there). Shift adds the backpack ("Stack allowed+").
+  The button width is fitted to the widest label of the container ("Stack allowed+"
+  for filtered ones) so Alt does not move anything. Layout is recomputed whenever the
+  filter presence changes; Sort, Take all and the title are restored to their
+  original positions first.
 - Measured (log): header "Storage Info" w=582, pivot 0.5; Sort w=40 (round icon,
   anchors/pivot 0.5) at x≈-9; Take all w=140, anchors 1, pivot 1, right edge 271;
   gap between them only 13 px. Clones are shrunk to their label + ≤30 px padding.
-- Two-row header (only when Stack allowed is shown): title (`StoragePanelUI.storageName`,
-  private) centered in the top row, Sort / Stack allowed / Stack / Take all packed
-  right-to-left in the bottom row. Always used for such containers (user decision);
+- Two-row header (only for filtered containers — the wide "Stack allowed+" button would
+  overlap the title in one row): title (`StoragePanelUI.storageName`, private) in the
+  top row, Sort / Stack / Take all packed right-to-left in the bottom row. Always used for such containers (user decision);
   no height check. Measured: header h=77, button row h=37; the title rect is narrow
   and its preferred height is 67 even as one line (auto-sized font), so instead of
   measuring text, the title rect itself is resized to the top row (full width from
@@ -297,6 +324,20 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   postfix; item action buttons `ItemInfoPanel.useButton` / `secondaryUseButton`
   (private, attached lazily from `BulkActions.UpdateButtonLabels`) — shown only
   when `BulkActions.GetKind` reports a bulk mode (Break / Slaughter).
+
+## G. Plant max — `src\Patches\PlantMaxPatches.cs`
+- User chose Shift + Click on a recipe list item (no new button). Animal cages are
+  `Growing` too, so they get it with no extra code (user: keep it if it comes free).
+- Prefix on `RecipeButton.OnPointerClick` (LMB + Shift, the button's
+  `activeCraftingBase` is the open `Growing`, amount slider not shown): amount =
+  min(`GetRecipeMultiplier(recipe)`, free `GrowingSlots`); enable conditions as the
+  vanilla Plant button (`!disabledButton`, `!recipeInfo.craftingDisabled`,
+  `RecipeInfoUI.CheckModifiers(recipe, recipeInfo.modifiers)`); then
+  `SetSelectedRecipe(recipe)` + `StartGrow(amount)`. Shift + Click never toggles the
+  recipe info, even when nothing can be planted.
+- Tooltip: postfix on `RecipeListUI.CreateButton` (garden list only, plantable
+  recipes) attaches `HintTooltip` to the newest button (`recipeButtons` last entry)
+  with the current max amount.
 
 ## Common limitations
 - The Stack button is not reachable with a gamepad.

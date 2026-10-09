@@ -16,9 +16,9 @@ inventory screens.
   every type already in the container from your inventory into it
 - **Stack+** (Shift + Click on the Stack button): the same, also taking from
   your backpack
-- **Stack allowed** (for containers that accept specific items, e.g. a bottle crate):
-  move every item the container accepts from your inventory into it;
-  Shift + Click also takes from your backpack
+- **Stack allowed** (Alt + Click on the Stack button, for containers that accept
+  specific items, e.g. a bottle crate): move every item the container accepts
+  from your inventory into it; Shift + Alt + Click also takes from your backpack
 - **Take similar** (Alt + Click on the Take all button): take from the
   container only the item types you already have in your inventory
 
@@ -27,6 +27,10 @@ inventory screens.
   (bottles, jars, glass panes, ...)
 - **Slaughter all** (Shift + Click on the Slaughter button): slaughter every
   animal of the same kind in the same inventory, with a confirmation click
+
+**Gardens and animal cages**
+- **Plant max** (Shift + Click on a recipe in the list): plant as many as
+  possible at once — no amount slider
 
 **No items on the floor**: when a container is full, results go to your
 inventory instead of falling on the ground — for item actions used inside a
