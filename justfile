@@ -9,13 +9,13 @@ set lazy := true
 # GameDir from Config.Build.user.props (the same file the build uses); empty if missing
 game_dir := `& ./tools/game-dir.ps1`
 
-# Print the game folder from Config.Build.user.props
-show-game-dir: _game-dir
-    @echo '{{game_dir}}'
-
 # List recipes
 default:
     @just --list --unsorted
+
+# Print the game folder from Config.Build.user.props
+show-game-dir: _game-dir
+    @echo '{{game_dir}}'
 
 # Build (Debug by default; `just build Release`)
 build config="Debug":

@@ -11,6 +11,20 @@ inventory screens.
 - **Move all of a kind** (Shift + Ctrl + Left Click): move every stack of that
   item from the same inventory
 
+<details>
+<summary>▶ Video: Move stack / Move one</summary>
+
+https://github.com/user-attachments/assets/96306874-324a-4046-9d58-edcfa4c91638
+
+</details>
+
+<details>
+<summary>▶ Video: Move all of a kind</summary>
+
+https://github.com/user-attachments/assets/f67e329b-05de-4c70-b9ae-9c3ecf2dbf76
+
+</details>
+
 **Storage window buttons**
 - **Stack** (new button in storage inventory): top-up container with items from your inventory.
   Moves items of every type already in the container from your inventory into it.
@@ -20,19 +34,54 @@ inventory screens.
 - **Take similar** (Alt + Click on the 'Take all' button): take from the
   container only the item types you already have in your inventory
 
+<details>
+<summary>▶ Video: Stack</summary>
+
+https://github.com/user-attachments/assets/a2d8d6f8-79ff-4e3f-b0de-e029260ea46b
+
+</details>
+
+<details>
+<summary>▶ Video: Stack allowed</summary>
+
+https://github.com/user-attachments/assets/8a319c53-8055-4092-ab5e-70a8c865f0d2
+
+</details>
+
 **Bulk item actions**
 - **Break all** (Shift + Click on the Break button): break the whole stack
   (bottles, jars, glass panes, ...)
 - **Slaughter all** (Shift + Click on the Slaughter button): slaughter every
   animal of the same kind in the same inventory, with a confirmation click
 
+<details>
+<summary>▶ Video: Break all / Slaughter all</summary>
+
+https://github.com/user-attachments/assets/c81f8f15-3eaa-4375-bca6-fb428a1e9a01
+
+</details>
+
 **Gardens and animal cages**
 - **Plant max** (Shift + Click on a recipe in the list): plant as many as
   possible in one click
 
+<details>
+<summary>▶ Video: Plant max</summary>
+
+https://github.com/user-attachments/assets/972c2720-6dbc-4eb9-a3fe-44f5ee6a04f1
+
+</details>
+
 **No items/rats/cats on the floor**: results go to your inventory before falling on the ground.
 Works for manual crafting, for breaking bottles inside bottle crates (does not accept glass),
 for taking rats/cats out of breeding room etc.
+
+<details>
+<summary>▶ Video: animals stay in your inventory when the cage is full</summary>
+
+https://github.com/user-attachments/assets/3cab5777-0755-4a49-8560-2c295eab6965
+
+</details>
 
 ## Details
 
