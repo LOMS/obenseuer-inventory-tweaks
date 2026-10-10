@@ -14,14 +14,14 @@ inventory screens.
 <details>
 <summary>▶ Video: Move stack / Move one</summary>
 
-UPLOAD: videos/shift_click_items.mp4
+https://github.com/user-attachments/assets/96306874-324a-4046-9d58-edcfa4c91638
 
 </details>
 
 <details>
 <summary>▶ Video: Move all of a kind</summary>
 
-UPLOAD: videos/quick_transfer_similar.mp4
+https://github.com/user-attachments/assets/f67e329b-05de-4c70-b9ae-9c3ecf2dbf76
 
 </details>
 
@@ -37,14 +37,14 @@ UPLOAD: videos/quick_transfer_similar.mp4
 <details>
 <summary>▶ Video: Stack</summary>
 
-UPLOAD: videos/stack_button.mp4
+https://github.com/user-attachments/assets/a2d8d6f8-79ff-4e3f-b0de-e029260ea46b
 
 </details>
 
 <details>
 <summary>▶ Video: Stack allowed</summary>
 
-UPLOAD: videos/stack_allowed.mp4
+https://github.com/user-attachments/assets/8a319c53-8055-4092-ab5e-70a8c865f0d2
 
 </details>
 
@@ -57,7 +57,7 @@ UPLOAD: videos/stack_allowed.mp4
 <details>
 <summary>▶ Video: Break all / Slaughter all</summary>
 
-UPLOAD: videos/shift_bulk_break_slaughter.mp4
+https://github.com/user-attachments/assets/c81f8f15-3eaa-4375-bca6-fb428a1e9a01
 
 </details>
 
@@ -68,7 +68,7 @@ UPLOAD: videos/shift_bulk_break_slaughter.mp4
 <details>
 <summary>▶ Video: Plant max</summary>
 
-UPLOAD: videos/quick_plant.mp4
+https://github.com/user-attachments/assets/972c2720-6dbc-4eb9-a3fe-44f5ee6a04f1
 
 </details>
 
@@ -79,7 +79,7 @@ for taking rats/cats out of breeding room etc.
 <details>
 <summary>▶ Video: animals stay in your inventory when the cage is full</summary>
 
-UPLOAD: videos/animal_cages.mp4
+https://github.com/user-attachments/assets/3cab5777-0755-4a49-8560-2c295eab6965
 
 </details>
 
