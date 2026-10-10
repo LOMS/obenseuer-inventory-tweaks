@@ -8,35 +8,80 @@ inventory screens.
 **Quick transfer between inventories** (e.g. inventory ↔ storage)
 - **Move stack** (Shift + Left Click): move the whole stack with click
 - **Move one** (Shift + Right Click): move a single item
-  [▶ video](videos/shift_click_items.mp4)
 - **Move all of a kind** (Shift + Ctrl + Left Click): move every stack of that
-  item from the same inventory [▶ video](videos/quick_transfer_similar.mp4)
+  item from the same inventory
+
+<details>
+<summary>▶ Video: Move stack / Move one</summary>
+
+UPLOAD: videos/shift_click_items.mp4
+
+</details>
+
+<details>
+<summary>▶ Video: Move all of a kind</summary>
+
+UPLOAD: videos/quick_transfer_similar.mp4
+
+</details>
 
 **Storage window buttons**
 - **Stack** (new button in storage inventory): top-up container with items from your inventory.
   Moves items of every type already in the container from your inventory into it.
 - **Stack+** (Shift + Click on the Stack button): the same, also taking from your backpack
-  [▶ video](videos/stack_button.mp4)
 - **Stack allowed** (Alt + Click on the Stack button) - for containers that accept specific items, e.g. a bottle crate or ore wagon.
-  [▶ video](videos/stack_allowed.mp4)
 - **Stack allowed+** (Shift + Alt + Click on the Stack button) - Same, also takes from your backpack
 - **Take similar** (Alt + Click on the 'Take all' button): take from the
   container only the item types you already have in your inventory
+
+<details>
+<summary>▶ Video: Stack</summary>
+
+UPLOAD: videos/stack_button.mp4
+
+</details>
+
+<details>
+<summary>▶ Video: Stack allowed</summary>
+
+UPLOAD: videos/stack_allowed.mp4
+
+</details>
 
 **Bulk item actions**
 - **Break all** (Shift + Click on the Break button): break the whole stack
   (bottles, jars, glass panes, ...)
 - **Slaughter all** (Shift + Click on the Slaughter button): slaughter every
   animal of the same kind in the same inventory, with a confirmation click
-  [▶ video](videos/shift_bulk_break_slaughter.mp4)
+
+<details>
+<summary>▶ Video: Break all / Slaughter all</summary>
+
+UPLOAD: videos/shift_bulk_break_slaughter.mp4
+
+</details>
 
 **Gardens and animal cages**
 - **Plant max** (Shift + Click on a recipe in the list): plant as many as
-  possible in one click [▶ video](videos/quick_plant.mp4)
+  possible in one click
+
+<details>
+<summary>▶ Video: Plant max</summary>
+
+UPLOAD: videos/quick_plant.mp4
+
+</details>
 
 **No items/rats/cats on the floor**: results go to your inventory before falling on the ground.
 Works for manual crafting, for breaking bottles inside bottle crates (does not accept glass),
-for taking rats/cats out of breeding room etc. [▶ video](videos/animal_cages.mp4)
+for taking rats/cats out of breeding room etc.
+
+<details>
+<summary>▶ Video: animals stay in your inventory when the cage is full</summary>
+
+UPLOAD: videos/animal_cages.mp4
+
+</details>
 
 ## Details
 
