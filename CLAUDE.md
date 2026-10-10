@@ -52,16 +52,23 @@ research and design decisions: `reference\notes.md`.
 - `reference\notes.md` — research notes (committed)
 - `reference\decompiled\` — decompiled game code (NOT committed, do NOT copy into `src\`)
 - `tools\export-game-code.bat|.ps1` — refresh the decompiled code (requires `ilspycmd`)
-- `tools\build.bat`, `tools\deploy.bat` — shortcuts for the commands below
-  (deploy refuses to run while the game is running)
+- `justfile` — task runner (`just`): `build`, `deploy`, `package`, `release <x.y.z>`,
+  `export`, `log [n]`, `clean`; deploy refuses to run while the game is running
+- `tools\build.bat`, `tools\deploy.bat`, `tools\package.bat`, `tools\release.bat` —
+  the same as .bat shortcuts
 - `LICENSE` — MIT; GitHub: https://github.com/LOMS/obenseuer-inventory-tweaks
 
 ## Commands
 - Build: `dotnet build`
 - Deploy: `dotnet build -t:Deploy` → `<GameDir>\BepInEx\plugins\InventoryTweaks\`
   (only with the user's permission and with the game closed)
-- Version lives in two places: `<Version>` in `InventoryTweaks.csproj` and
-  `Plugin.Version` in `src\Plugin.cs` — keep them in sync.
+- Release archive: `dotnet build -c Release -t:Package` →
+  `dist\InventoryTweaks-<Version>.zip` (`plugins\InventoryTweaks\InventoryTweaks.dll`).
+- Release: `tools\release.bat <x.y.z> [-Draft]` (user runs it; needs `gh`) — sets
+  `<Version>`, builds the zip, commits, tags `v<x.y.z>`, pushes, `gh release create`.
+  Built locally because CI has no game DLLs.
+- Version lives only in `<Version>` in `InventoryTweaks.csproj`; `Plugin.Version`
+  comes from the generated `obj\...\VersionInfo.g.cs`.
 
 ## Rules
 - Do not modify, delete or overwrite game files. The only exception is the

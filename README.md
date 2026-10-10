@@ -56,8 +56,10 @@ for taking rats/cats out of breeding room etc.
   nowhere still drops at the usual spot.
 
 ## Installation
-Requires BepInEx 6 (Unity.Mono). Copy `InventoryTweaks.dll` to
-`<Obenseuer>\BepInEx\plugins\InventoryTweaks\`.
+Requires BepInEx 6 (Unity.Mono). Download the zip from
+[Releases](https://github.com/LOMS/obenseuer-inventory-tweaks/releases) and extract
+it into `<Obenseuer>\BepInEx\` (the DLL ends up in
+`BepInEx\plugins\InventoryTweaks\InventoryTweaks.dll`).
 
 ## License
 [MIT](LICENSE)

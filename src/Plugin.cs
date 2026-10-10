@@ -12,7 +12,8 @@ namespace InventoryTweaks
     {
         public const string Guid = "lomserman.obenseuer.inventorytweaks";
         public const string Name = "Inventory Tweaks";
-        public const string Version = "0.3.0";
+        // Generated from <Version> in InventoryTweaks.csproj
+        public const string Version = VersionInfo.Version;
 
         internal static ManualLogSource Log;
 

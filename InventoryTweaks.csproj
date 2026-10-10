@@ -44,6 +44,19 @@
     <None Remove="reference\**" />
   </ItemGroup>
 
+  <!-- Single source of the version: <Version> above → generated constant used by Plugin -->
+  <Target Name="GenerateVersionInfo" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <VersionInfoFile>$(IntermediateOutputPath)VersionInfo.g.cs</VersionInfoFile>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(VersionInfoFile)" Overwrite="true" WriteOnlyWhenDifferent="true"
+                      Lines="namespace InventoryTweaks { internal static class VersionInfo { public const string Version = &quot;$(Version)&quot;%3B } }" />
+    <ItemGroup>
+      <Compile Include="$(VersionInfoFile)" />
+      <FileWrites Include="$(VersionInfoFile)" />
+    </ItemGroup>
+  </Target>
+
   <!-- All references point to the installed game; none are copied to the output -->
   <ItemDefinitionGroup>
     <Reference>
@@ -78,6 +91,23 @@
     <MakeDir Directories="$(PluginsDir)" />
     <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb" DestinationFolder="$(PluginsDir)" />
     <Message Importance="high" Text="Deployed to $(PluginsDir)" />
+  </Target>
+
+  <!--
+    Release archive: dotnet build -c Release -t:Package
+    → dist\InventoryTweaks-<Version>.zip containing plugins\InventoryTweaks\InventoryTweaks.dll
+    (extract into <Obenseuer>\BepInEx\)
+  -->
+  <Target Name="Package" DependsOnTargets="Build">
+    <PropertyGroup>
+      <PackageStageDir>$(MSBuildProjectDirectory)\obj\package</PackageStageDir>
+      <PackageZip>$(MSBuildProjectDirectory)\dist\$(AssemblyName)-$(Version).zip</PackageZip>
+    </PropertyGroup>
+    <RemoveDir Directories="$(PackageStageDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PackageStageDir)\plugins\InventoryTweaks" />
+    <MakeDir Directories="$(MSBuildProjectDirectory)\dist" />
+    <ZipDirectory SourceDirectory="$(PackageStageDir)" DestinationFile="$(PackageZip)" Overwrite="true" />
+    <Message Importance="high" Text="Packaged $(PackageZip)" />
   </Target>
 
 </Project>

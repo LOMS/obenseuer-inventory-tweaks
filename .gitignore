@@ -4,6 +4,7 @@ reference/decompiled/
 # Build output
 bin/
 obj/
+dist/
 
 # Local machine settings (game path)
 Config.Build.user.props
