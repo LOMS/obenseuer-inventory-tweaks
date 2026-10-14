@@ -61,6 +61,21 @@ https://github.com/user-attachments/assets/c81f8f15-3eaa-4375-bca6-fb428a1e9a01
 
 </details>
 
+**Crafting stations** (the Craft button)
+- **Craft one** (Shift + Click on a recipe in the list): craft it once, without opening the recipe
+  and pressing Craft. Works only if the recipe can be crafted now; otherwise the click is a normal one
+- **Craft amount** (Alt + Click on the Craft button): choose how many times to craft
+- **Craft all** (Ctrl + Click on the Craft button): craft until the ingredients run out
+- **Esc** stops the **Craft amount** and **Craft all** sequences; the station window stays open
+
+<details>
+<summary>▶ Video: craft amount/all demonstration</summary>
+
+https://github.com/user-attachments/assets/972c2720-6dbc-4eb9-a3fe-44f5ee6a04f1
+
+</details>
+
+
 **Gardens and animal cages**
 - **Plant max** (Shift + Click on a recipe in the list): plant as many as
   possible in one click
@@ -103,6 +118,14 @@ https://github.com/user-attachments/assets/3cab5777-0755-4a49-8560-2c295eab6965
 - Crafting results go to your inventory only while the station's window is
   open; background crafting keeps the vanilla behavior. Anything that fits
   nowhere still drops at the usual spot.
+- A station that is switched off (or out of fuel) is switched on automatically by any click
+  on Craft, including a normal one. When its crafting is over, a station switched on this way
+  is switched off again (a station you had switched on yourself stays on).
+- Craft amount / Craft all press Craft for you, one craft at a time, waiting until the
+  button is available again.
+  The run ends by itself when the ingredients run out, the station window is closed,
+  another recipe is selected, or the station cannot be powered (no fuel, no electricity).
+  A normal click on Craft during a run hands control back to you.
 
 ## Installation
 Requires BepInEx 6 (Unity.Mono). Download the zip from

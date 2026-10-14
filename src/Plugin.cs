@@ -39,6 +39,7 @@ namespace InventoryTweaks
                 BulkActions.UpdateButtonLabels();
                 StackButton.UpdateButtons();
                 TakeSimilar.UpdateLabel();
+                CraftAutomation.Tick();
             }
             catch (Exception e)
             {

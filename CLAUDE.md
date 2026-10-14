@@ -24,6 +24,10 @@ research and design decisions: `reference\notes.md`.
   moves every item the container accepts.
   Alt + Take all ("Take similar") is the reverse: takes only the types already in
   the main inventory (same file).
+- Craft automation (`src\Patches\CraftAutomationPatches.cs`): Shift + Click on a
+  recipe of a station's list crafts it once; Alt + Click on the station's Craft button — craft N times (game's amount slider); Ctrl + Click —
+  until the ingredients run out; waits for the button between crafts, switches
+  the station on, ESC stops (swallowed, the window stays open).
 - Plant max (`src\Patches\PlantMaxPatches.cs`): Shift + Click on a recipe in a
   garden / animal cage list plants as many as possible via `Growing.StartGrow`.
 - All moves/actions reuse the game's own methods (`QuickMove`, `ItemAction.Invoke`,
