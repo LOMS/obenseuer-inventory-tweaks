@@ -159,6 +159,19 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   `Storage.AddItem` → `Slots[0].AddItem(..., overflowSpot)` → same drop path.
   Harvest by interacting with a plant in the world (`grow.Interact` → `grow.Harvest`)
   already adds straight to the player via `ItemOperations.AddItems(stack)`.
+- **Game build of 2026-10-14 (revision):** `Storage.AddItem(..., overflowToPlayer)` and
+  `Storage.AddItemToStorage(stack, overflowToPlayer)` got the flag; `Storage.AddToSlots` with it
+  does exactly what the mod's patch did: `Slots[0].AddItemAndReturnRemaining(dropItems: false)`
+  -> `ItemOperations.AddItemAndReturnRemaining(slot: null)` (player inventory) -> `DropItem`
+  of the rest. Every call in `CraftingBase.CreateItems` (results, returned reserved containers,
+  liquid containers) and in `Growing.CreateItems` (both overloads: animals / mushrooms / plants)
+  passes `manuActive` (= the station UI is open). So crafting and UI harvest are covered by the
+  game itself, with the same condition as the mod had (window open; background crafting
+  drops as before).
+  **Not covered:** `ItemConsumable.Invoke` still spawns `ItemsToSpawn` through
+  `ItemOperations.AddItemWithPermission` -> `AddItems` -> `slot.AddItem` (`dropItems: true`),
+  so e.g. breaking glass inside a beer crate (the crate refuses glass) still drops it.
+
 ## 8. Storage panel buttons (for the "Stack" feature)
 - `StoragePanelUI.cs` (`Inventory.instance.storagePanelUI`): public `GameObject`
   fields `takeAllButton`, `sortButton`; private `Storage currentStorage` (set in
@@ -275,14 +288,16 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   (realtime) if anything was suppressed.
 
 ## C. Overflow to player — `src\Patches\OverflowToPlayerPatches.cs`
-- Scopes (counter, closed in a Finalizer): `ItemConsumable.Invoke` on an item in
-  a non-player slot; `CraftingBase.CreateItems` while `currentCraftingBase == this`
-  (background crafting keeps vanilla); both `Growing.Harvest` overloads.
-- Inside a scope, `SlotController.AddItemAndReturnRemaining(dropItems: true)` on a
-  container slot adds without dropping, sends the remainder to
-  `ItemOperations.AddItemAndReturnRemaining(slot: null)` (player main slots,
-  character slots, backpack, stolen-item checks), then drops only what is left
-  (same dropper/position).
+- Since the game build of 2026-10-14 only **item actions** are left to the mod (see section 7):
+  scope around `ItemConsumable.Invoke` on an item in a non-player slot (counter, closed in a
+  Finalizer) + Prefix on `SlotController.AddItemAndReturnRemaining(dropItems: true)` for container
+  slots inside a scope: adds without dropping, sends the remainder to
+  `ItemOperations.AddItemAndReturnRemaining(slot: null)` (player main slots, character slots,
+  backpack, stolen-item checks), then drops only what is left (same dropper/position).
+- The scopes for `CraftingBase.CreateItems` and both `Growing.Harvest` overloads were removed:
+  the game does it itself now (`Storage.AddToSlots` with `overflowToPlayer`) and the mod's scope
+  would only add a second, redundant path (and one that also fired when a harvest was started
+  with the window closed, which the game deliberately leaves alone).
 
 ## D. "Stack" button — `src\Patches\StackButtonPatches.cs`
 - UI (Unity Explorer): `.../Inventory Panel/Other panels/Storage Panel/Storage Info/`

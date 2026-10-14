@@ -241,18 +241,50 @@ namespace InventoryTweaks.Patches
 
             foreach (SlotController slot in slots)
             {
-                if (slot == null || slot.itemStack.itemId != itemId || slot.itemStack.itemAmount <= 0)
-                {
-                    continue;
-                }
-                // Actions need the item's UI object; slots without one are skipped
-                ItemData data = slot.slot != null ? slot.slot.GetItemItemData() : null;
+                ItemData data = SameItemData(slot, itemId);
                 if (data != null)
                 {
                     result.Add(data);
                 }
             }
             return result;
+        }
+
+        /// <summary>
+        /// Allocation-free "are there at least two of them" for the per-frame button label
+        /// (same slots as FindSameItemInContainer).
+        /// </summary>
+        private static bool HasSeveralSameItems(ItemData itemData)
+        {
+            SlotController origin = itemData.slotController;
+            int itemId = origin.itemStack.itemId;
+            SlotController[] slots = origin.Siblings;
+            if (slots == null)
+            {
+                // Only the slot itself
+                return false;
+            }
+
+            int count = 0;
+            foreach (SlotController slot in slots)
+            {
+                if (SameItemData(slot, itemId) != null && ++count > 1)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>The slot's UI item if it holds the item with this id, otherwise null.</summary>
+        private static ItemData SameItemData(SlotController slot, int itemId)
+        {
+            if (slot == null || slot.itemStack.itemId != itemId || slot.itemStack.itemAmount <= 0)
+            {
+                return null;
+            }
+            // Actions need the item's UI object; slots without one are skipped
+            return slot.slot != null ? slot.slot.GetItemItemData() : null;
         }
 
         private static void Refresh(ItemInfo info)
@@ -291,17 +323,23 @@ namespace InventoryTweaks.Patches
             _pendingSlot = null;
         }
 
+        private static GameObject _tooltipPrimary;
+        private static GameObject _tooltipSecondary;
+
         /// <summary>Called every frame (LateUpdate) to show bulk labels on the action buttons.</summary>
         private static void EnsureTooltips(ItemInfoPanel panel)
         {
+            // Remember the buttons that already have the tooltip: this runs every frame
             GameObject primary = PrimaryButton(panel);
-            if (primary != null && primary.GetComponent<HintTooltip>() == null)
+            if (primary != null && primary != _tooltipPrimary)
             {
+                _tooltipPrimary = primary;
                 HintTooltip.Attach(primary, (out string title, out string details) => GetActionHint(0, out title, out details));
             }
             GameObject secondary = SecondaryButton(panel);
-            if (secondary != null && secondary.GetComponent<HintTooltip>() == null)
+            if (secondary != null && secondary != _tooltipSecondary)
             {
+                _tooltipSecondary = secondary;
                 HintTooltip.Attach(secondary, (out string title, out string details) => GetActionHint(1, out title, out details));
             }
         }
@@ -387,7 +425,7 @@ namespace InventoryTweaks.Patches
                 case BulkKind.BreakAll:
                     return "Break all";
                 case BulkKind.SlaughterAll:
-                    return FindSameItemInContainer(itemData).Count > 1 ? "Slaughter all" : null;
+                    return HasSeveralSameItems(itemData) ? "Slaughter all" : null;
                 default:
                     return null;
             }

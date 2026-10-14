@@ -12,8 +12,10 @@ Newest first. Each release lists only what changed since the previous one.
 - Attempt to craft on unpowered station switches the station on automatically,
   and switches it off again when its crafting is over.
 
-### Removed
-- **"No items on the floor"** - The game does this by itself now.
+### Changed
+- **No items on the floor**: crafting results and harvested animals/mushrooms now go to your
+  inventory in the base game, so the mod only handles item actions in containers
+  (e.g. breaking glass in a bottle crate).
 
 ## v0.9.0 — 2026-10-10
 

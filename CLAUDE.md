@@ -14,9 +14,8 @@ research and design decisions: `reference\notes.md`.
   container (click-again confirmation, "Your Cat" excluded); button labels change
   while Shift is held; repeated action sounds are collapsed.
 - Overflow to player (`src\Patches\OverflowToPlayerPatches.cs`): results of item
-  actions in containers, crafting with the station UI open and harvesting from
-  the garden / animal cage UI go to the player's inventory instead of the ground
-  when the container is full.
+  actions in containers go to the player's inventory instead of the ground when the
+  container refuses them. Crafting and harvesting do this in the base game now.
 - "Stack" button in the storage panel (`src\Patches\StackButtonPatches.cs`):
   moves items of the types already in the container from the inventory into it;
   Shift+Click ("Stack+") also from the backpack; tooltip on hover.
