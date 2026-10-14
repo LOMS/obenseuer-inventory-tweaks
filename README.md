@@ -72,17 +72,6 @@ https://github.com/user-attachments/assets/972c2720-6dbc-4eb9-a3fe-44f5ee6a04f1
 
 </details>
 
-**No items/rats/cats on the floor**: results go to your inventory before falling on the ground.
-Works for manual crafting, for breaking bottles inside bottle crates (does not accept glass),
-for taking rats/cats out of breeding room etc.
-
-<details>
-<summary>▶ Video: animals stay in your inventory when the cage is full</summary>
-
-https://github.com/user-attachments/assets/3cab5777-0755-4a49-8560-2c295eab6965
-
-</details>
-
 ## Details
 
 - All moves and actions go through the game's own logic, so the usual rules
@@ -100,9 +89,6 @@ https://github.com/user-attachments/assets/3cab5777-0755-4a49-8560-2c295eab6965
   anything there.
 - Slaughter all: the button turns into "Slaughter N?" for confirmation — click again within
   3 seconds to confirm. **Your own cat is never included**.
-- Crafting results go to your inventory only while the station's window is
-  open; background crafting keeps the vanilla behavior. Anything that fits
-  nowhere still drops at the usual spot.
 
 ## Installation
 Requires BepInEx 6 (Unity.Mono). Download the zip from

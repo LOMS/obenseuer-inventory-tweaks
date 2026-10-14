@@ -142,24 +142,7 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   confirmText, Action)`) exists but is only referenced by `ShopBaseUI.notification`
   (lives inside the shop UI). No generic dialog found.
 
-## 7. Where produced items go (drop path)
-- `ItemConsumable.Invoke` spawns results via `ItemOperations.AddItemWithPermission`
-  → `ItemOperations.AddItems(item, amount, owner, meta, slot, notify, ignoreCrime)`
-  → `slot.AddItem` → `SlotController.AddItemAndReturnRemaining(dropItems: true)`
-  (target slot, then `Siblings`, then `ItemOperations.DropItem` on the ground).
-- Crafting: `CraftingBase.CreateItems(...)` (protected virtual, overridden by
-  `manufacturingProcess`) → `Storage.AddItem` (OutputStorage ?? InputOutputStorage)
-  → `Slots[0].AddItem(..., dropper: station)` → same `AddItemAndReturnRemaining(dropItems: true)`.
-  `CraftingBase.currentCraftingBase` / `manuActive` = the player has the station UI open
-  (set in `Enter()`, cleared in `Exit()`).
-- Harvest: gardens and animal cages are both `Growing : CraftingBase` (animals are
-  "plants"; `AnimalBreeder` only breeds). UI harvest = `Growing.Harvest()`
-  (`GrowingPanel.PressHarvestButton`) and `Growing.Harvest(GameObject)`
-  (`ProgressSlot` click) → private `Growing.CreateItems` → `Storage.AddItemToStorage` /
-  `Storage.AddItem` → `Slots[0].AddItem(..., overflowSpot)` → same drop path.
-  Harvest by interacting with a plant in the world (`grow.Interact` → `grow.Harvest`)
-  already adds straight to the player via `ItemOperations.AddItems(stack)`.
-## 8. Storage panel buttons (for the "Stack" feature)
+## 7. Storage panel buttons (for the "Stack" feature)
 - `StoragePanelUI.cs` (`Inventory.instance.storagePanelUI`): public `GameObject`
   fields `takeAllButton`, `sortButton`; private `Storage currentStorage` (set in
   `UpdateStoragePanelUI(Storage)`), private `SoundInfo takeAllSound`.
@@ -183,7 +166,7 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
 - Layout of the buttons (parent, LayoutGroup, label component, localization)
   is in the prefab — to be checked in Unity Explorer.
 
-## 9. Planting in gardens / animal cages (for "plant max")
+## 8. Planting in gardens / animal cages (for "plant max")
 - UI: `GrowingPanel.instance` → `growingPanelUI.recipeListUI` (`RecipeListUI`, shared
   class with every crafting panel) + `recipeInfo` (`RecipeInfoUI`).
 - `RecipeListUI.UpdateRecipes(...)` → `CreateButton(...)`: instantiates one of three
@@ -237,16 +220,6 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
 - Sounds: Prefix on `ItemInfo.PlaySound` during a bulk action lets the first
   sound through and suppresses the rest; one more plays after `SecondSoundDelay`
   (realtime) if anything was suppressed.
-
-## C. Overflow to player — `src\Patches\OverflowToPlayerPatches.cs`
-- Scopes (counter, closed in a Finalizer): `ItemConsumable.Invoke` on an item in
-  a non-player slot; `CraftingBase.CreateItems` while `currentCraftingBase == this`
-  (background crafting keeps vanilla); both `Growing.Harvest` overloads.
-- Inside a scope, `SlotController.AddItemAndReturnRemaining(dropItems: true)` on a
-  container slot adds without dropping, sends the remainder to
-  `ItemOperations.AddItemAndReturnRemaining(slot: null)` (player main slots,
-  character slots, backpack, stolen-item checks), then drops only what is left
-  (same dropper/position).
 
 ## D. "Stack" button — `src\Patches\StackButtonPatches.cs`
 - UI (Unity Explorer): `.../Inventory Panel/Other panels/Storage Panel/Storage Info/`
