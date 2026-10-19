@@ -6,6 +6,10 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-ExecutionPoli
 # Evaluate variables (i.e. `game_dir`) only when a recipe uses them
 set lazy := true
 
+# Plain MSBuild output: the default terminal logger redraws lines with cursor
+# control codes, which IDE consoles (i.e. Rider's Run window) render as garbage
+export MSBUILDTERMINALLOGGER := "off"
+
 # GameDir from Config.Build.user.props (the same file the build uses); empty if missing
 game_dir := `& ./tools/game-dir.ps1`
 

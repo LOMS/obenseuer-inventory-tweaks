@@ -159,6 +159,19 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   `Storage.AddItem` → `Slots[0].AddItem(..., overflowSpot)` → same drop path.
   Harvest by interacting with a plant in the world (`grow.Interact` → `grow.Harvest`)
   already adds straight to the player via `ItemOperations.AddItems(stack)`.
+- **Game build of 2026-10-14 (revision):** `Storage.AddItem(..., overflowToPlayer)` and
+  `Storage.AddItemToStorage(stack, overflowToPlayer)` got the flag; `Storage.AddToSlots` with it
+  does exactly what the mod's patch did: `Slots[0].AddItemAndReturnRemaining(dropItems: false)`
+  -> `ItemOperations.AddItemAndReturnRemaining(slot: null)` (player inventory) -> `DropItem`
+  of the rest. Every call in `CraftingBase.CreateItems` (results, returned reserved containers,
+  liquid containers) and in `Growing.CreateItems` (both overloads: animals / mushrooms / plants)
+  passes `manuActive` (= the station UI is open). So crafting and UI harvest are covered by the
+  game itself, with the same condition as the mod had (window open; background crafting
+  drops as before).
+  **Not covered:** `ItemConsumable.Invoke` still spawns `ItemsToSpawn` through
+  `ItemOperations.AddItemWithPermission` -> `AddItems` -> `slot.AddItem` (`dropItems: true`),
+  so e.g. breaking glass inside a beer crate (the crate refuses glass) still drops it.
+
 ## 8. Storage panel buttons (for the "Stack" feature)
 - `StoragePanelUI.cs` (`Inventory.instance.storagePanelUI`): public `GameObject`
   fields `takeAllButton`, `sortButton`; private `Storage currentStorage` (set in
@@ -206,6 +219,42 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
 - So "plant max" = `SetSelectedRecipe(recipe)` + `StartGrow(min(GetRecipeMultiplier,
   free spots))`, with the same enable conditions as the vanilla Plant button.
 
+## 9. Craft button (for "Craft amount" / "Craft all")
+- Station UI: `ManufacturingPanel.instance` → `manufacturingPanelUI.recipeListUI`
+  (`RecipeListUI`) + `recipeInfo` (`RecipeInfoUI`); `ManufacturingPanel.ActiveManu` is the
+  open `manufacturing : CraftingBase` (= `CraftingBase.currentCraftingBase`).
+- The button: `manufacturing.CheckItems` → `ManufacturingPanel.SetCreateButtonValues(text)`
+  → `RecipeInfoUI.SetCreateButtonValues(text, station, station, "Craft")`; `ShowRecipe`
+  instantiates `createButtonEnabled` / `Disabled` / `Progress` and puts a `Relay` output
+  `outputCustomEvent → SendMessage("Craft")` on the enabled one. Label "Craft N/M"
+  (`CraftButtonMessage`: in progress / `AllowSimultaneous`); "Crafting Full N/M" when
+  busy (`UpdateCraftButton` → `craftingDisabled = true`, disabled prefab shown).
+- `manufacturing.Craft()` (public, no args): returns if not `PoweredAndActive` (flashes
+  the power icon); does nothing if `CraftingInProgress >= AllowSimultaneous`; otherwise
+  `RemoveItems(selectedRecipe, ...)` — **no ingredient check inside**, the vanilla button
+  only exists for an executable recipe. `ProcessTime > 0` → `CraftInProgress` + timer
+  (`CraftDelayed` → `OnCraftDone`), else `OnCraftDone` at once. Both end with
+  `CheckItems()` (rebuilds the recipe list and the button) while the station is open.
+- Executable = `ExecutableRecipes` (protected, filled in `CheckItems` via
+  `CompareRecipeToItems`); the recipe info panel also needs `RecipeInfoUI.CheckModifiers`.
+- The game has its own `manufacturing.Autocraft` (machines, no UI) — unrelated.
+- `AmountSliderUI` (Plant / Move / Drop / Trade): `AmountSliderType` is a fixed enum and
+  `PressedOk` switches on the private `type` — a new slider purpose needs a patch on
+  `PressedOk` (and the OK label via the private `okButtonText`).
+- Power is per station, not per recipe: `CraftingBase.PoweredAndActive` = `AlwaysOn` ||
+  (`On` && `_Power.IsPowered()`). `On` is the player's power switch
+  (`ManufacturingPanel.PressPowerButton` → `ActiveManu.Toggle(!On)`, flashes the icon if
+  still unpowered). `_Power.IsPowered()`: no fuel needed → `PowerInput` (external
+  electricity; the mod cannot fix it); fuel needed → `_Fuel.active`.
+  `CraftingBase.Toggle(true)`: `_Power.TogglePower(true)` → `Fuel.Toggle(true)` starts the
+  burner if there is remaining burn time or fuel in the fuel slot, else returns false;
+  `On = true` is set either way. **Do not call the panel's PressPowerButton while `On` is
+  already true — it would switch the station off.**
+- ESC = key binding "Pause Menu". The open station UI closes on it
+  (`InventoryNavigationHandler` → `Exit`), and `GameController.Update` opens the pause menu
+  or hides a game menu on the same press. Closing the station clears
+  `currentCraftingBase`.
+
 # Mod design (decisions agreed with the user)
 
 ## A. Quick transfer — `src\Patches\ShiftClickPatches.cs`
@@ -221,6 +270,17 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
 - Vanilla Shift disabled: Transpiler on `ItemData.GetMoveMode` replaces
   `Input.GetKey` with a version that ignores LeftShift. Vanilla Ctrl ("half") on
   hold / double-click is unchanged.
+
+- Key hints line of the open inventory ("F)MOVE ITEM   DRAG & DROP   R)DROP ..."): the text is built
+  by `InventoryNavigationHandler.GetButtonInfo(tab, window, inputType)` (public, wraps the private
+  `GetButtonInfoTab0`; sets `controlsInfoText` via `ChangeControlsInfo` whenever the window / storage
+  changes; style "KEY)TEXT" in capitals, parts separated by 3 spaces). Postfix `QuickTransferHintsPatch`
+  appends `SHIFT+LMB)MOVE STACK   SHIFT+CTRL+LMB)MOVE ALL STACKS   SHIFT+RMB)MOVE ONE` for tab 0, keyboard
+  input, not in the amount-slider window, and only with a storage open (same condition as the vanilla
+  MOVE ITEM hint: `ForeignSlots != null` or liquid storage). MOVE ALL STACKS only when
+  `ShiftClickPatch.CanMoveAllOfType()` (no trade / liquid storage / bottle recycling). The line is
+  rebuilt only on window / storage changes, so starting a trade does not refresh it at once.
+  Not checked in game: whether the longer single line fits the hints bar.
 
 ## B. Bulk item actions — `src\Patches\BulkActionPatches.cs`
 - Prefix on `ItemInfo.UseItem(int, bool)` (vanilla guards mirrored: buttons
@@ -239,14 +299,16 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   (realtime) if anything was suppressed.
 
 ## C. Overflow to player — `src\Patches\OverflowToPlayerPatches.cs`
-- Scopes (counter, closed in a Finalizer): `ItemConsumable.Invoke` on an item in
-  a non-player slot; `CraftingBase.CreateItems` while `currentCraftingBase == this`
-  (background crafting keeps vanilla); both `Growing.Harvest` overloads.
-- Inside a scope, `SlotController.AddItemAndReturnRemaining(dropItems: true)` on a
-  container slot adds without dropping, sends the remainder to
-  `ItemOperations.AddItemAndReturnRemaining(slot: null)` (player main slots,
-  character slots, backpack, stolen-item checks), then drops only what is left
-  (same dropper/position).
+- Since the game build of 2026-10-14 only **item actions** are left to the mod (see section 7):
+  scope around `ItemConsumable.Invoke` on an item in a non-player slot (counter, closed in a
+  Finalizer) + Prefix on `SlotController.AddItemAndReturnRemaining(dropItems: true)` for container
+  slots inside a scope: adds without dropping, sends the remainder to
+  `ItemOperations.AddItemAndReturnRemaining(slot: null)` (player main slots, character slots,
+  backpack, stolen-item checks), then drops only what is left (same dropper/position).
+- The scopes for `CraftingBase.CreateItems` and both `Growing.Harvest` overloads were removed:
+  the game does it itself now (`Storage.AddToSlots` with `overflowToPlayer`) and the mod's scope
+  would only add a second, redundant path (and one that also fired when a harvest was started
+  with the window closed, which the game deliberately leaves alone).
 
 ## D. "Stack" button — `src\Patches\StackButtonPatches.cs`
 - UI (Unity Explorer): `.../Inventory Panel/Other panels/Storage Panel/Storage Info/`
@@ -325,6 +387,23 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   (private, attached lazily from `BulkActions.UpdateButtonLabels`) — shown only
   when `BulkActions.GetKind` reports a bulk mode (Break / Slaughter).
 
+## I. Mod badge (hammer) — `src\ModBadge.cs`
+- User request: every modified / added button gets a small hammer in its top-right corner: a square,
+  2 px margin, side = `button height / 2 - 2`. Icon `assets\hammer.png` (32x32 RGBA, light on
+  transparent), embedded into the DLL (`EmbeddedResource`, `LogicalName="hammer.png"`), decoded with
+  `ImageConversion.LoadImage` (references `UnityEngine.ImageConversionModule`, `UnityEngine.UIModule`,
+  both shipped with the game) into one shared `Sprite`.
+- `ModBadge.Attach(button, visible?)` adds the component and a child `Image` (`raycastTarget = false`,
+  `LayoutElement.ignoreLayout`, anchors / pivot (1, 1), anchored position (-2, -2)); the size is
+  recomputed on `OnEnable` and `OnRectTransformDimensionsChange` of the button. A button cloned from one
+  that already has a badge reuses the child (found by name). An optional predicate (checked every frame
+  by the component) hides the badge while the mod does nothing — used for the item action buttons,
+  which the game reuses for every item (`HasBulkMode` = same condition as their tooltip).
+- Attached next to every `HintTooltip.Attach`: Stack, Take all, Break / Slaughter (conditional),
+  Craft (`createButtonEnabled`'s `DefaultUIButton` object, recreated on every list rebuild), and the
+  recipe buttons of station / garden lists (not the grey ones — Shift + Click does nothing there).
+- Not checked in game: size / look on each button, overlap with labels, the recipe rows.
+
 ## G. Plant max — `src\Patches\PlantMaxPatches.cs`
 - User chose Shift + Click on a recipe list item (no new button). Animal cages are
   `Growing` too, so they get it with no extra code (user: keep it if it comes free).
@@ -338,6 +417,72 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
 - Tooltip: postfix on `RecipeListUI.CreateButton` (garden list only, plantable
   recipes) attaches `HintTooltip` to the newest button (`recipeButtons` last entry)
   with the current max amount.
+
+## H. Craft amount / Craft all — `src\Patches\CraftAutomationPatches.cs`
+- Scope: the `manufacturing` "Craft" button only (not Plant / Start / Fill).
+- Prefix on `manufacturing.Craft` (the Relay's `SendMessage("Craft")`; no other callers except
+  `Autocraft`, which is skipped): station open, no `_inside` flag. Ctrl held -> "Craft all"
+  (unlimited), Alt held -> "Craft amount", Ctrl wins when both. A plain click during a run
+  stops the run (the player took over); a plain click always switches the station on first
+  (`EnsurePower`, user request) and then runs vanilla.
+- Auto power off (user request): `EnsurePower` remembers stations it switched on
+  (`AutoPowered`; only when they were not `PoweredAndActive` before). `ReleasePower` (every
+  tick) calls `station.Toggle(false)` once the station is not the current run and
+  `CraftingInProgress == 0`. **Must not happen earlier:** `Toggle(false)` -> `OnPowerOut` sets
+  `timer.stopped = true` on every craft in progress, so the craft would freeze. Entries are
+  dropped if the player switches the station off himself or it is `AlwaysOn`. A failed
+  power-on (no fuel / no electricity) restores the previous switch position.
+  For `RequirePlayer` stations closing the window freezes the timers (`Exit`), so the
+  power-off waits until the player comes back and the craft finishes.
+- Craft amount: max = `Math.Max(1, GetRecipeMultiplier(recipe))`; the game's `AmountSliderUI`
+  is shown with an own `AmountSliderType` value (100) and an `ItemData` preview like
+  `GrowItems` builds (first output, else the default liquid container, else first input);
+  OK label set to "Craft" through the private `okButtonText`. `ShowSlider` takes both the slider range
+  and the number drawn on the icon from `ItemData.amount`, so after `ShowSlider` the icon
+  (private `itemInfoSlot`) is redrawn with `ChangeDisplayItemData` + `UpdateItem` and the amount of
+  the displayed item that one craft gives (`recipe.Output[item]`, at least 1; the game hides the
+  number for 1). Prefix on
+  `AmountSliderUI.PressedOk` handles our type (reads private `currentValue`). max == 1 skips
+  the slider.
+- Run (`Plugin.LateUpdate` -> `CraftAutomation.Tick`, one step per frame at most):
+  1. stop if the window is closed (`ActiveManu` / `currentCraftingBase` != station);
+  2. stop if `recipeInfo.CurrentRecipe()` is null or its **ID** differs — `RecipeListUI.UpdateRecipes`
+     re-shows the current recipe from a new `ShallowCopy` after every rebuild (the reference
+     changes, the ID does not); a null recipe also means the ingredients ran out;
+  3. stop if the recipe is grey in the list: `recipeInfo.currentButton.disabledButton` (the game's own
+     verdict, set on every list rebuild from ingredients / skill and stored by `RecipeButton.ShowRecipe`)
+     or `!RecipeInfoUI.CheckModifiers(recipe, recipeInfo.modifiers)`. Does not depend on the station
+     being busy or on the Craft button being redrawn (the list only depends on ingredients, the Craft
+     button also on `craftingDisabled`). Nothing is recomputed by the mod;
+  4. wait while `CraftingInProgress >= AllowSimultaneous` (busy). The Craft button is **not**
+     looked at: it is grey while busy and is redrawn only 0.01 s (`CheckItemsDelay`) after a timed
+     craft finishes (`CraftDelayed` -> `OnCraftDone` rebuilds it while `CraftingInProgress` is still 1,
+     then decrements). `Craft()` itself checks only power and `CraftingInProgress`, so nothing has to
+     wait for the redraw. Using the button as the "can craft" signal ended every run after the first
+     timed craft (Lockpicks, `ProcessTime` 3600; bug found in game);
+  5. power: if not `PoweredAndActive` -> `station.Toggle(true)` (what the power button does);
+     still unpowered -> notification "Crafting stopped" + stop;
+  6. `station.Craft()` (with an `_inside` flag), count; stop when the amount is reached.
+- ESC (user decision): Postfix on `InputManager.GetKeyDown("Pause Menu")` (ESC; "Exit Cancel"
+  and "Menu" are Tab) returns false for the press that stops a run and for every other
+  call in the same frame, so the window stays open. With no run ESC is vanilla.
+- Button: while Alt / Ctrl is held the label of the active Craft button objects (enabled /
+  disabled / progress) reads "Craft amount" / "Craft all"; during a run "Crafting N" or
+  "Crafting N/M". Originals are restored when the override ends (the game recreates the
+  buttons on every list rebuild anyway). Tooltip: Postfix on `RecipeInfoUI.ShowRecipe`
+  attaches `HintTooltip` to the object with the `DefaultUIButton` of `createButtonEnabled`.
+- Craft one (user request): Shift + Click on a recipe of the open station's list. The existing
+  Prefix on `RecipeButton.OnPointerClick` (`PlantMaxPatches.cs`) now tries Plant max, then
+  `CraftAutomation.TryCraftOne`: station = `button.activeCraftingBase as manufacturing` (open,
+  not `Autocraft`); conditions of the vanilla Craft button — `!button.disabledButton`,
+  `RecipeInfoUI.CheckModifiers`, free station (`CraftingInProgress < AllowSimultaneous`). Then
+  `Stop()` of any run, `SetSelectedRecipe(button.recipe)`, `EnsurePower`, `Craft()` with the
+  `_inside` flag. If it cannot be crafted the click stays vanilla (the recipe opens and shows what
+  is missing). The recipe info is not opened, `selectedRecipe` is re-set by the list rebuild that
+  `Craft()` triggers (`UpdateRecipes` re-shows the current recipe). Tooltip: the same
+  `RecipeListUI.CreateButton` Postfix as for Plant max, for the station's list too.
+- Not checked in game yet: the click path (Prefix on `Craft`), slider look, label restore,
+  Shift + Click on a recipe (esp. that the shown recipe's Craft button still crafts the shown recipe).
 
 ## Common limitations
 - The Stack button is not reachable with a gamepad.

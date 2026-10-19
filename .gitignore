@@ -1,6 +1,9 @@
 # Decompiled game code (third-party, never commit)
 reference/decompiled/
 
+# Directory with experiments & discoveries, jus for my convenience.
+discovery
+
 # Build output
 bin/
 obj/

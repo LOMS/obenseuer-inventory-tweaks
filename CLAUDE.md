@@ -14,9 +14,8 @@ research and design decisions: `reference\notes.md`.
   container (click-again confirmation, "Your Cat" excluded); button labels change
   while Shift is held; repeated action sounds are collapsed.
 - Overflow to player (`src\Patches\OverflowToPlayerPatches.cs`): results of item
-  actions in containers, crafting with the station UI open and harvesting from
-  the garden / animal cage UI go to the player's inventory instead of the ground
-  when the container is full.
+  actions in containers go to the player's inventory instead of the ground when the
+  container refuses them. Crafting and harvesting do this in the base game now.
 - "Stack" button in the storage panel (`src\Patches\StackButtonPatches.cs`):
   moves items of the types already in the container from the inventory into it;
   Shift+Click ("Stack+") also from the backpack; tooltip on hover.
@@ -24,6 +23,10 @@ research and design decisions: `reference\notes.md`.
   moves every item the container accepts.
   Alt + Take all ("Take similar") is the reverse: takes only the types already in
   the main inventory (same file).
+- Craft automation (`src\Patches\CraftAutomationPatches.cs`): Shift + Click on a
+  recipe of a station's list crafts it once; Alt + Click on the station's Craft button — craft N times (game's amount slider); Ctrl + Click —
+  until the ingredients run out; waits for the button between crafts, switches
+  the station on, ESC stops (swallowed, the window stays open).
 - Plant max (`src\Patches\PlantMaxPatches.cs`): Shift + Click on a recipe in a
   garden / animal cage list plants as many as possible via `Growing.StartGrow`.
 - All moves/actions reuse the game's own methods (`QuickMove`, `ItemAction.Invoke`,
@@ -45,6 +48,9 @@ research and design decisions: `reference\notes.md`.
 - `src\Plugin.cs` — entry point (Harmony `PatchAll`, per-frame button labels)
 - `src\ItemKind.cs` — "same kind of item" (item id + liquid inside) for the
   move-similar features
+- `src\ModBadge.cs` — small hammer in the top-right corner of every button whose behavior
+  the mod changes (icon: `assets\hammer.png`, embedded into the DLL)
+- `assets\` — images embedded into the DLL (`EmbeddedResource` in the csproj)
 - `src\HintTooltip.cs` — hover tooltip component (game `ToolTip`) used on every
   button whose behavior the mod changes
 - Note: the game defines a global `Button` type; use `UnityEngine.UI.Button`.

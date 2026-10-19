@@ -100,28 +100,45 @@ namespace InventoryTweaks.Patches
             {
                 return true;
             }
-            return !PlantMax.TryPlantMax(__instance);
+            // Shift + Click: plant max in a garden / cage, craft one at a station
+            return !(PlantMax.TryPlantMax(__instance) || CraftAutomation.TryCraftOne(__instance));
         }
     }
 
-    /// <summary>Tooltip on garden / cage recipe buttons (the list is rebuilt after each planting).</summary>
+    /// <summary>
+    /// Tooltip on garden / cage recipe buttons (Plant max) and on crafting station recipe buttons
+    /// (Craft one); the list is rebuilt after each planting / craft.
+    /// </summary>
     [HarmonyPatch(typeof(RecipeListUI), nameof(RecipeListUI.CreateButton))]
     internal static class RecipeListCreateButtonPatch
     {
         private static void Postfix(RecipeListUI __instance)
         {
-            if (GrowingPanel.instance == null || GrowingPanel.instance.growingPanelUI == null
-                || GrowingPanel.instance.growingPanelUI.recipeListUI != __instance)
+            bool garden = GrowingPanel.instance != null && GrowingPanel.instance.growingPanelUI != null
+                && GrowingPanel.instance.growingPanelUI.recipeListUI == __instance;
+            bool station = ManufacturingPanel.instance != null && ManufacturingPanel.instance.manufacturingPanelUI != null
+                && ManufacturingPanel.instance.manufacturingPanelUI.recipeListUI == __instance;
+            if (!garden && !station)
             {
                 return;
             }
 
             // The button created last is the last child of the list
             RecipeButton button = LastRecipeButton(__instance);
-            if (button != null && !button.disabledButton)
+            if (button == null || button.disabledButton)
+            {
+                return;
+            }
+            ModBadge.Attach(button.gameObject);
+            if (garden)
             {
                 HintTooltip.Attach(button.gameObject,
                     (out string title, out string details) => PlantMax.GetHint(button, out title, out details));
+            }
+            else
+            {
+                HintTooltip.Attach(button.gameObject,
+                    (out string title, out string details) => CraftAutomation.GetCraftOneHint(button, out title, out details));
             }
         }
 

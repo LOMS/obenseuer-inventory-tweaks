@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using HarmonyLib;
 using OS.Items;
 using UnityEngine;
@@ -6,12 +5,11 @@ using UnityEngine;
 namespace InventoryTweaks.Patches
 {
     /// <summary>
-    /// Items produced by the player's own actions that do not fit into a container
-    /// go to the player's inventory instead of being dropped on the ground:
-    /// - item actions (Break, Slaughter, ...) used on an item inside a container;
-    /// - crafting at a station whose UI the player has open;
-    /// - harvesting a garden / animal cage from its UI.
+    /// Items produced by an item action (Break, Slaughter, ...) used on an item inside a container
+    /// that do not fit into it go to the player's inventory instead of being dropped on the ground.
     /// Only what fits nowhere is dropped, at the same spot as in vanilla.
+    /// Crafting and harvesting from a station / garden UI are handled by the game itself
+    /// (Storage.AddItem with overflowToPlayer), so they are not touched here.
     /// </summary>
     internal static class OverflowToPlayer
     {
@@ -57,53 +55,6 @@ namespace InventoryTweaks.Patches
             {
                 OverflowToPlayer.End();
             }
-        }
-    }
-
-    [HarmonyPatch(typeof(CraftingBase), "CreateItems",
-        typeof(Recipe), typeof(List<KeyValuePair<ItemStack, int>>), typeof(int), typeof(bool), typeof(CraftingBase.CraftingInputData), typeof(int))]
-    internal static class CraftingScopePatch
-    {
-        private static void Prefix(CraftingBase __instance, out bool __state)
-        {
-            // Only while the player has this station open; background crafting keeps vanilla behavior
-            __state = __instance != null && CraftingBase.currentCraftingBase == __instance;
-            if (__state)
-            {
-                OverflowToPlayer.Begin();
-            }
-        }
-
-        private static void Finalizer(bool __state)
-        {
-            if (__state)
-            {
-                OverflowToPlayer.End();
-            }
-        }
-    }
-
-    /// <summary>
-    /// Harvest from a garden / animal cage UI: the Harvest button (GrowingPanel.PressHarvestButton)
-    /// and clicking a progress slot (ProgressSlot). Both are player actions only.
-    /// </summary>
-    [HarmonyPatch]
-    internal static class HarvestScopePatch
-    {
-        private static IEnumerable<System.Reflection.MethodBase> TargetMethods()
-        {
-            yield return AccessTools.Method(typeof(Growing), nameof(Growing.Harvest), System.Type.EmptyTypes);
-            yield return AccessTools.Method(typeof(Growing), nameof(Growing.Harvest), new[] { typeof(GameObject) });
-        }
-
-        private static void Prefix()
-        {
-            OverflowToPlayer.Begin();
-        }
-
-        private static void Finalizer()
-        {
-            OverflowToPlayer.End();
         }
     }
 

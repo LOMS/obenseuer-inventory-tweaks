@@ -80,6 +80,7 @@ namespace InventoryTweaks.Patches
             if (panel.takeAllButton != null && panel.takeAllButton.GetComponent<HintTooltip>() == null)
             {
                 HintTooltip.Attach(panel.takeAllButton, TakeAllTooltipTitle, TakeAllTooltipDetails);
+                ModBadge.Attach(panel.takeAllButton);
             }
             UpdateButtons();
         }
@@ -176,6 +177,7 @@ namespace InventoryTweaks.Patches
             }
 
             HintTooltip.Attach(clone, GetStackHint);
+            ModBadge.Attach(clone);
 
             return new PanelButton
             {
