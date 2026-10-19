@@ -92,6 +92,7 @@ before falling on the ground. Works for breaking bottles inside bottle crates (t
 
 ## Details
 
+- Buttons whose behavior the mod changes (or adds) have a small hammer in the top-right corner.
 - All moves and actions go through the game's own logic, so the usual rules
   still apply: stack limits, allowed categories, required tools, trading.
 - Vanilla Shift behavior ("move one" on hold or double-click) is replaced by the

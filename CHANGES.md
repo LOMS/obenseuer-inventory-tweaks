@@ -5,6 +5,7 @@ Newest first. Each release lists only what changed since the previous one.
 ## v1.0.0 — unreleased
 
 ### Added
+- **Hammer mark**: buttons whose behavior the mod changes have a small hammer in the top-right corner.
 - **Quick transfer hints**: the key hints line of the open inventory now lists
   `Shift + LMB`, `Shift + Ctrl + LMB` and `Shift + RMB`.
 - **Quick craft one**: `Shift + Click` in recipes list.

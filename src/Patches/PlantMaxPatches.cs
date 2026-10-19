@@ -129,6 +129,7 @@ namespace InventoryTweaks.Patches
             {
                 return;
             }
+            ModBadge.Attach(button.gameObject);
             if (garden)
             {
                 HintTooltip.Attach(button.gameObject,

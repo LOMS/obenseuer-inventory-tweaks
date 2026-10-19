@@ -553,6 +553,7 @@ namespace InventoryTweaks.Patches
             DefaultUIButton button = info.createButtonEnabled.GetComponentInChildren<DefaultUIButton>();
             if (button != null)
             {
+                ModBadge.Attach(button.gameObject);
                 HintTooltip.Attach(button.gameObject, "Craft",
                     "Alt + Click: craft several times (choose the amount).\n" +
                     "Ctrl + Click: craft until the ingredients run out.\n" +

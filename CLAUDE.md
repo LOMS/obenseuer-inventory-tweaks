@@ -48,6 +48,9 @@ research and design decisions: `reference\notes.md`.
 - `src\Plugin.cs` — entry point (Harmony `PatchAll`, per-frame button labels)
 - `src\ItemKind.cs` — "same kind of item" (item id + liquid inside) for the
   move-similar features
+- `src\ModBadge.cs` — small hammer in the top-right corner of every button whose behavior
+  the mod changes (icon: `assets\hammer.png`, embedded into the DLL)
+- `assets\` — images embedded into the DLL (`EmbeddedResource` in the csproj)
 - `src\HintTooltip.cs` — hover tooltip component (game `ToolTip`) used on every
   button whose behavior the mod changes
 - Note: the game defines a global `Button` type; use `UnityEngine.UI.Button`.

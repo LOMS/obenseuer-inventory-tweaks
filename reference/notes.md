@@ -387,6 +387,23 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   (private, attached lazily from `BulkActions.UpdateButtonLabels`) — shown only
   when `BulkActions.GetKind` reports a bulk mode (Break / Slaughter).
 
+## I. Mod badge (hammer) — `src\ModBadge.cs`
+- User request: every modified / added button gets a small hammer in its top-right corner: a square,
+  2 px margin, side = `button height / 2 - 2`. Icon `assets\hammer.png` (32x32 RGBA, light on
+  transparent), embedded into the DLL (`EmbeddedResource`, `LogicalName="hammer.png"`), decoded with
+  `ImageConversion.LoadImage` (references `UnityEngine.ImageConversionModule`, `UnityEngine.UIModule`,
+  both shipped with the game) into one shared `Sprite`.
+- `ModBadge.Attach(button, visible?)` adds the component and a child `Image` (`raycastTarget = false`,
+  `LayoutElement.ignoreLayout`, anchors / pivot (1, 1), anchored position (-2, -2)); the size is
+  recomputed on `OnEnable` and `OnRectTransformDimensionsChange` of the button. A button cloned from one
+  that already has a badge reuses the child (found by name). An optional predicate (checked every frame
+  by the component) hides the badge while the mod does nothing — used for the item action buttons,
+  which the game reuses for every item (`HasBulkMode` = same condition as their tooltip).
+- Attached next to every `HintTooltip.Attach`: Stack, Take all, Break / Slaughter (conditional),
+  Craft (`createButtonEnabled`'s `DefaultUIButton` object, recreated on every list rebuild), and the
+  recipe buttons of station / garden lists (not the grey ones — Shift + Click does nothing there).
+- Not checked in game: size / look on each button, overlap with labels, the recipe rows.
+
 ## G. Plant max — `src\Patches\PlantMaxPatches.cs`
 - User chose Shift + Click on a recipe list item (no new button). Animal cages are
   `Growing` too, so they get it with no extra code (user: keep it if it comes free).

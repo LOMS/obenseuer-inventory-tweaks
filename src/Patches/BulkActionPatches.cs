@@ -335,13 +335,22 @@ namespace InventoryTweaks.Patches
             {
                 _tooltipPrimary = primary;
                 HintTooltip.Attach(primary, (out string title, out string details) => GetActionHint(0, out title, out details));
+                ModBadge.Attach(primary, () => HasBulkMode(0));
             }
             GameObject secondary = SecondaryButton(panel);
             if (secondary != null && secondary != _tooltipSecondary)
             {
                 _tooltipSecondary = secondary;
                 HintTooltip.Attach(secondary, (out string title, out string details) => GetActionHint(1, out title, out details));
+                ModBadge.Attach(secondary, () => HasBulkMode(1));
             }
+        }
+
+        /// <summary>Whether the action button currently has a bulk mode (the same condition as its tooltip).</summary>
+        private static bool HasBulkMode(int index)
+        {
+            ItemInfo info = ItemInfo.instance;
+            return info != null && GetKind(info.ItemData, index) != BulkKind.None;
         }
 
         /// <summary>Tooltip only for actions that have a bulk mode.</summary>
