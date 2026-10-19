@@ -5,6 +5,8 @@ Newest first. Each release lists only what changed since the previous one.
 ## v1.0.0 — unreleased
 
 ### Added
+- **Quick transfer hints**: the key hints line of the open inventory now lists
+  `Shift + LMB`, `Shift + Ctrl + LMB` and `Shift + RMB`.
 - **Quick craft one**: `Shift + Click` in recipes list.
 - **Craft amount**: `Alt + Click` on the Craft button — choose how many times to craft.
 - **Craft all**: `Ctrl + Click` on the Craft button — craft until the ingredients run out.

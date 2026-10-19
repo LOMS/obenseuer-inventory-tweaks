@@ -57,7 +57,7 @@ namespace InventoryTweaks.Patches
         /// recycling have special QuickMove handling; with no storage open QuickMove equips.
         /// In those cases Shift+Ctrl+Click behaves like Shift+Click.
         /// </summary>
-        private static bool CanMoveAllOfType()
+        internal static bool CanMoveAllOfType()
         {
             return Inventory.instance.ForeignSlots != null
                 && TradePanel.instance.activeTrade == null
@@ -136,6 +136,43 @@ namespace InventoryTweaks.Patches
         private static bool GetKeyIgnoringShiftImpl(KeyCode key)
         {
             return key != KeyCode.LeftShift && Input.GetKey(key);
+        }
+    }
+
+    /// <summary>
+    /// Adds the Shift shortcuts to the key hints line of the open inventory ("F)MOVE ITEM   R)DROP ...").
+    /// The game rebuilds that line through GetButtonInfo whenever the window or storage changes.
+    /// </summary>
+    [HarmonyPatch(typeof(InventoryNavigationHandler), nameof(InventoryNavigationHandler.GetButtonInfo))]
+    internal static class QuickTransferHintsPatch
+    {
+        private const string MoveStack = "SHIFT+LMB)MOVE STACK";
+        private const string MoveAll = "SHIFT+CTRL+LMB)MOVE ALL STACKS";
+        private const string MoveOne = "SHIFT+RMB)MOVE ONE";
+
+        private static void Postfix(int tab, InventoryNavigationHandler.CurrentInventoryWindow currentWindow,
+            InputManager.InputType inputType, ref string __result)
+        {
+            try
+            {
+                // Mouse shortcuts: not for the gamepad, not while the amount slider replaces the hints,
+                // and (like the vanilla MOVE ITEM hint) only with a storage open
+                if (tab != 0 || inputType == InputManager.InputType.Controller
+                    || currentWindow == InventoryNavigationHandler.CurrentInventoryWindow.AmountSliderPanel
+                    || Inventory.instance == null
+                    || (Inventory.instance.ForeignSlots == null && LiquidStorage.currentStorage == null))
+                {
+                    return;
+                }
+
+                string hints = MoveStack + "   " + (ShiftClickPatch.CanMoveAllOfType() ? MoveAll + "   " : "") + MoveOne;
+                __result = string.IsNullOrEmpty(__result) ? hints : __result + "   " + hints;
+            }
+            catch (System.Exception e)
+            {
+                // Never break the vanilla hints line because of the extra text
+                Plugin.Log.LogWarning($"Quick transfer hints failed: {e.Message}");
+            }
         }
     }
 }

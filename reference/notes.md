@@ -271,6 +271,17 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
   `Input.GetKey` with a version that ignores LeftShift. Vanilla Ctrl ("half") on
   hold / double-click is unchanged.
 
+- Key hints line of the open inventory ("F)MOVE ITEM   DRAG & DROP   R)DROP ..."): the text is built
+  by `InventoryNavigationHandler.GetButtonInfo(tab, window, inputType)` (public, wraps the private
+  `GetButtonInfoTab0`; sets `controlsInfoText` via `ChangeControlsInfo` whenever the window / storage
+  changes; style "KEY)TEXT" in capitals, parts separated by 3 spaces). Postfix `QuickTransferHintsPatch`
+  appends `SHIFT+LMB)MOVE STACK   SHIFT+CTRL+LMB)MOVE ALL STACKS   SHIFT+RMB)MOVE ONE` for tab 0, keyboard
+  input, not in the amount-slider window, and only with a storage open (same condition as the vanilla
+  MOVE ITEM hint: `ForeignSlots != null` or liquid storage). MOVE ALL STACKS only when
+  `ShiftClickPatch.CanMoveAllOfType()` (no trade / liquid storage / bottle recycling). The line is
+  rebuilt only on window / storage changes, so starting a trade does not refresh it at once.
+  Not checked in game: whether the longer single line fits the hints bar.
+
 ## B. Bulk item actions — `src\Patches\BulkActionPatches.cs`
 - Prefix on `ItemInfo.UseItem(int, bool)` (vanilla guards mirrored: buttons
   enabled, no cooldown, no trade, no liquid child).
