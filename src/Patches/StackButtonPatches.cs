@@ -571,9 +571,10 @@ namespace InventoryTweaks.Patches
 
         /// <summary>
         /// Moves one source stack into the target slots (stacks of the same kind first,
-        /// then free slots); returns the moved amount. Shared with "Take similar".
+        /// then free slots); returns the moved amount. At most <paramref name="limit"/> items
+        /// are moved. Shared with "Take similar" and planting from the inventory.
         /// </summary>
-        internal static int MoveToContainer(SlotController source, SlotController[] targets)
+        internal static int MoveToContainer(SlotController source, SlotController[] targets, int limit = int.MaxValue)
         {
             ItemStack stack = source.itemStack;
             Item item = GetItem(stack);
@@ -584,7 +585,8 @@ namespace InventoryTweaks.Patches
 
             ItemKind kind = ItemKind.Of(stack);
             int stackAmount = stack.itemAmount;
-            int remaining = stackAmount;
+            int remaining = Mathf.Min(stackAmount, limit);
+            int toMove = remaining;
 
             // Pass 1: top up stacks of the same kind (incl. liquid); pass 2: free slots
             for (int pass = 0; pass < 2 && remaining > 0; pass++)
@@ -612,15 +614,15 @@ namespace InventoryTweaks.Patches
                 }
             }
 
-            int moved = stackAmount - remaining;
+            int moved = toMove - remaining;
             if (moved <= 0)
             {
                 return 0;
             }
 
             // Shrink the source the same way SlotController.MoveToOtherInventory does
-            stack.itemAmount = remaining;
-            if (remaining == 0)
+            stack.itemAmount = stackAmount - moved;
+            if (stack.itemAmount == 0)
             {
                 source.RemoveItem();
             }

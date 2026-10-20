@@ -79,6 +79,10 @@ https://github.com/user-attachments/assets/972c2720-6dbc-4eb9-a3fe-44f5ee6a04f1
 **Gardens and animal cages**
 - **Plant max** (Shift + Click on a recipe in the list): plant as many as
   possible in one click
+- **Plant from the inventory**: your main inventory counts as part of the
+  garden / cage storage. Seeds (animals) in your inventory are enough to see the
+  recipe, plant with the Plant button or Plant max — the missing items are moved
+  into the garden automatically right before planting, worst quality first
 
 <details>
 <summary>▶ Video: Plant max</summary>

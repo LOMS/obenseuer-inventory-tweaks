@@ -29,6 +29,9 @@ research and design decisions: `reference\notes.md`.
   the station on, ESC stops (swallowed, the window stays open).
 - Plant max (`src\Patches\PlantMaxPatches.cs`): Shift + Click on a recipe in a
   garden / animal cage list plants as many as possible via `Growing.StartGrow`.
+- Plant from inventory (`src\Patches\PlantFromInventoryPatches.cs`): the main inventory
+  counts as part of the open garden / cage storage (recipe list, multiplier, ingredient
+  display); missing items are moved into the garden right before `Growing.StartGrow`.
 - All moves/actions reuse the game's own methods (`QuickMove`, `ItemAction.Invoke`,
   ...) so vanilla checks are never bypassed.
 

@@ -492,6 +492,55 @@ All run inside `QuickMove` → `MoveToOtherInventory` →
 - Not checked in game yet: the click path (Prefix on `Craft`), slider look, label restore,
   Shift + Click on a recipe (esp. that the shown recipe's Craft button still crafts the shown recipe).
 
+## J. Plant from the player's inventory — `src\Patches\PlantFromInventoryPatches.cs`
+Implemented as designed below (built, NOT checked in game yet). `StackButton.MoveToContainer`
+got an optional `limit` for partial moves. If the garden storage cannot take the missing
+items, `StartGrow` plants less;
+first in-game test showed that `metaSettings.useAmmoAsInput` is `True` on every garden recipe
+(and `RecipeInfoUI` passes it as `checkAmmo` to `Storage.CheckForItem`), so it must not
+disable the extension; stacks with `ItemAmmodata` are skipped instead. The open garden is
+`aquarium_001_usable` (the "terrarium"), a plain `Growing`; at 0 it is skipped (vanilla would plant one for amount 0).
+- Vanilla planting only looks at the garden's own `InputOutputStorage` (the storage panel
+  next to the inventory): `CompareRecipeToItems`, `CountItems` (-> `GetRecipeMultiplier`)
+  and `RemoveItems` (-> `StartGrow`) all read `InputOutputStorage.storageSlots`; the player's
+  inventory is never consulted. So seeds / animals have to be moved into the garden first.
+- Which recipes are listed (`Growing.CheckItems` -> `RecipeListUI.UpdateRecipes`): recipes whose
+  ingredients are in the garden storage (normal buttons), plus every recipe the player has
+  learned (`RecipeController.GetAllRecipes`) as a grey "disabled" button
+  (`disabledButton = true`). A recipe that is neither learned nor stocked has no button at all.
+  Plant max currently ignores `disabledButton` buttons.
+- Reusable: `StackButton.MoveToContainer(SlotController source, SlotController[] targets)`
+  (vanilla `AddItem` checks, never drops) with `targets = growing.InputOutputStorage.Slots`;
+  `ItemKind` to match stacks. Ingredient matching: `Recipe.Input` (Item -> amount), groups via
+  `ItemGroupData` (`CraftingBaseHelperFunctions`), liquids / ammo / variants have special
+  cases; `Recipe.AllowedToUse(itemId, ownerId)` (stolen-only recipes).
+- User requirement: the player's main inventory (not the backpack) acts as a continuation of
+  the garden storage — if the garden storage is empty but the inventory has seeds, everything
+  (recipe list, ingredient display, vanilla Plant + slider, Shift + Click plant max) works as
+  if they were in the garden.
+- Why not "swap `storageSlots`": `RemoveItems` indexes `InputOutputStorage.storageSlots`
+  (`StorageSlot[]`) while inventory stacks are plain `ItemStack`, so they cannot be mixed in.
+- Design: virtual reads + real transfer right before the write; only while the garden is the
+  open `CraftingBase.currentCraftingBase` (so `Autofarm` etc. are untouched); only for plain
+  item inputs (no ItemGroup / liquid / ammo / variant recipes -> vanilla behavior).
+  - Reads: Prefix `CraftingBase.CompareRecipeToItems` (items == null -> garden stacks +
+    inventory stacks; makes recipes show as normal buttons); Postfix
+    `CraftingBase.GetRecipeMultiplier` (count garden + inventory per input, min of floor(total /
+    amount)); Postfix `Storage.CheckForItem` for the open garden's `InputOutputStorage`
+    (ingredient green / red in `RecipeInfoUI`; uses `ItemOperations.GetItemAmountFromSlot`).
+  - Write: Prefix `Growing.StartGrow(ref amount)`: per input, shortfall = amount * value -
+    garden storage amount; pull it from `Inventory.instance.Slots` into
+    `InputOutputStorage.Slots` (`Storage.Slots` always exist; `Slots[i].itemStack ==
+    storageSlots[i]`) via `StackButton.MoveToContainer` (vanilla `AddItem` checks, never
+    drops); if the garden storage is full, clamp `amount` to what is actually there.
+    Vanilla `RemoveItems` then consumes exactly `amount` * value, nothing is left over.
+  - Quality (user request): the pull takes inventory stacks with the lowest
+    `ItemStack.GetQualitydata().quality` first (stable order). Vanilla `RemoveItems` then
+    consumes the garden's own slots in slot order, so better stacks the player put into the
+    garden by hand are still used before the pulled ones.
+  - Known limitation: the list is rebuilt on garden changes (`CheckItems`), not when the
+    inventory changes while the panel is open; `StartGrow` therefore re-checks real amounts.
+
 ## Common limitations
 - The Stack button is not reachable with a gamepad.
 - Bulk operations (B, Shift+Ctrl in A) need the item's UI `ItemData`; slots that
