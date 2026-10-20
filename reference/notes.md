@@ -541,6 +541,50 @@ disable the extension; stacks with `ItemAmmodata` are skipped instead. The open 
   - Known limitation: the list is rebuilt on garden changes (`CheckItems`), not when the
     inventory changes while the panel is open; `StartGrow` therefore re-checks real amounts.
 
+## K. Quick harvest from the farm UI — `src\Patches\QuickHarvestPatches.cs`
+Implemented (built, NOT checked in game yet). User choices: ripe = every stage except
+`Growing`, i.e. `Spoil` (Spoiling and Spoiled) and `GrowingFruits` (only with
+`VisibleItemsReadyToHarvest() > 0`, else vanilla would destroy the plant); inventory full ->
+stop. `CollectibleItem` plants (no `grow`) count as ripe (vanilla click harvests them as is).
+- Prefix on `ProgressSlot.OnPointerClick` (Shift + LMB; always swallowed, so an unripe plant is
+  never uprooted): plants = `GrowingSlots` with `Plant != null` (same order as the grid cells),
+  from the clicked plant (`currentPlant`, private) to the end; ripe ones are decided up front,
+  then `Growing.Harvest(plant)` for each, with `QuickHarvest.Active` set.
+- Prefix on private `Storage.AddToSlots` for the open farm's `OutputStorage ?? InputOutputStorage`
+  while active: `ItemOperations.AddItemAndReturnRemaining(item, owner, null, meta, amount)` (player
+  main slots, character slots, backpack); the rest continues in vanilla (farm storage, overflow)
+  and marks the batch full -> the loop stops and `InventoryFull()` is shown.
+- Sounds: Prefix on `ItemSounds.PlaySound(PickupSoundName)` lets only the first pickup sound of the
+  batch through (`Item.PlaySound` does not go through `ItemInfo.PlaySound`, so `BulkActions`'
+  batching does not apply). The per-plant harvest clip (`RandomAudioLibrary.harvest`) is untouched.
+- No tooltip / badge: the slot already has the game's `ToolTipInfo` and slots are rebuilt after
+  each harvest.
+- Fruit picking (`GrowItem.GetItem`, plants in `GrowingFruits`) gives items to the player by itself;
+  the "inventory full" stop cannot intercept that path.
+
+### Research
+- UI: `GrowingPanel.UpdateItemsInProgress` builds one `ProgressSlot` per planted
+  `GrowingSpot.Plant` (non-null, in `GrowingSlots` order) into the cells of
+  `processSlotsUI` (`progressSlots[i]`, a grid; `AddItemToSlot(i)`), so the order of the
+  plants == the grid order (row by row). Each `ProgressSlot` gets `AddActiveGrowing(growing,
+  plant)` (private fields `activeGrowing`, `currentPlant`) unless `ManualHarvest`.
+  Slots are destroyed and rebuilt after a harvest (`UpdateItemsInProgressDelayed`, next frame).
+- Click = `ProgressSlot.OnPointerClick` -> `Growing.Harvest(GameObject plant)` -> for a `grow`:
+  `grow.HarvestExternal(out destroy)` -> private `Growing.CreateItems(List<ItemStack>)` ->
+  `storage.AddItemToStorage(stack, manuActive)` (storage = `OutputStorage ?? InputOutputStorage`,
+  i.e. the FARM's storage first; the player only gets the overflow); `CollectibleItem` plants go
+  through `CreateItems(List<Item>)` -> `storage.AddItem(...)`. Both end in private
+  `Storage.AddToSlots(item, amount, owner, meta, overflowToPlayer)`.
+- `grow.HarvestExternal` is NOT a pure "pick the ripe ones": ripe fruits (`GrowItem.readyToPick`)
+  are picked (and the plant stays); otherwise a spoiled (dead) plant is uprooted; otherwise the
+  whole plant is harvested (seeds + grown items scaled by `Age / FullGrownAge`, even when it is
+  still growing). So a plain click on an unripe plant destroys it for a poor yield.
+- Stages (`grow.GetCurrentStage()` / `GetCurrentStageProcess()`): `Growing` (Age < FullGrownAge),
+  `GrowingFruits` (grown, has `visibleGrownItems`, not rotting), `Spoil` (grown, no fruits, or
+  `growSpoil.spoiled`); the progress is `1 - spoil time`, 0 = "Spoiled" (dead plant).
+  The slot tooltip (`ToolTipInfo`) already shows name + stage, so a `HintTooltip` on a slot
+  would compete with it.
+
 ## Common limitations
 - The Stack button is not reachable with a gamepad.
 - Bulk operations (B, Shift+Ctrl in A) need the item's UI `ItemData`; slots that

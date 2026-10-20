@@ -83,6 +83,11 @@ https://github.com/user-attachments/assets/972c2720-6dbc-4eb9-a3fe-44f5ee6a04f1
   garden / cage storage. Seeds (animals) in your inventory are enough to see the
   recipe, plant with the Plant button or Plant max — the missing items are moved
   into the garden automatically right before planting, worst quality first
+- **Quick harvest** (Shift + Click on a plant in the farm's progress grid): harvests
+  every ripe plant from the clicked one to the end of the grid (the clicked one and
+  everything to its right and below) straight into your inventory. Ripe means past the
+  growing stage: spoiling, spoiled, or fruiting with fruits ready. Stops when the
+  inventory is full
 
 <details>
 <summary>▶ Video: Plant max</summary>
