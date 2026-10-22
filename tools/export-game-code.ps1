@@ -2,6 +2,8 @@
 .SYNOPSIS
   Decompiles the game's Assembly-CSharp.dll into a C# project so it can be
   searched and read with normal tools (grep, editor, Claude Code).
+  Also copies the game's StreamingAssets\*.json (Items.json, Recipes.json, ...)
+  into reference\game-data.
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File tools\export-game-code.ps1 `
@@ -20,6 +22,9 @@ param(
     # Where the decompiled project is written
     [string]$OutDir = (Join-Path $PSScriptRoot "..\reference\decompiled"),
 
+    # Where the game's data files (StreamingAssets\*.json) are copied
+    [string]$DataOutDir = (Join-Path $PSScriptRoot "..\reference\game-data"),
+
     # Re-export even if the DLL hash matches the previous export
     [switch]$Force
 )
@@ -29,6 +34,7 @@ $ErrorActionPreference = "Stop"
 # Resolve paths to absolute form so the checks below are predictable
 $GameDir = [System.IO.Path]::GetFullPath($GameDir)
 $OutDir  = [System.IO.Path]::GetFullPath($OutDir)
+$DataOutDir = [System.IO.Path]::GetFullPath($DataOutDir)
 
 # Make sure the decompiler is installed
 if (-not (Get-Command ilspycmd -ErrorAction SilentlyContinue)) {
@@ -39,6 +45,23 @@ if (-not (Get-Command ilspycmd -ErrorAction SilentlyContinue)) {
 $dataDir = Get-ChildItem -Path $GameDir -Directory -Filter "*_Data" | Select-Object -First 1
 if (-not $dataDir) {
     throw "No '*_Data' folder found in '$GameDir'. Check the -GameDir path."
+}
+
+# Copy the game's JSON data (items, recipes, ...) next to the decompiled code. Done on every
+# run, before the DLL check below: the data can change without the DLL changing.
+# UnityServicesProjectConfiguration.json is a service config, not game data - skipped.
+$streaming = Join-Path $dataDir.FullName "StreamingAssets"
+if (Test-Path $streaming) {
+    New-Item -ItemType Directory -Path $DataOutDir -Force | Out-Null
+    # Only files of this script's own kind are replaced; the folder is not wiped
+    Get-ChildItem -Path $DataOutDir -Filter *.json -File | Remove-Item -Force
+    $dataFiles = Get-ChildItem -Path $streaming -Filter *.json -File |
+        Where-Object { $_.Name -ne "UnityServicesProjectConfiguration.json" }
+    $dataFiles | Copy-Item -Destination $DataOutDir -Force
+    Write-Host "Copied $(@($dataFiles).Count) data file(s) to $DataOutDir"
+}
+else {
+    Write-Warning "No StreamingAssets folder in '$($dataDir.FullName)'; game data not copied."
 }
 
 $managed = Join-Path $dataDir.FullName "Managed"

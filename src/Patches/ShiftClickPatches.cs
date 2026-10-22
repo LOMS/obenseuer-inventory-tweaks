@@ -17,7 +17,7 @@ namespace InventoryTweaks.Patches
     {
         private static bool Prefix(ItemData __instance, PointerEventData eventData)
         {
-            if (!Input.GetKey(KeyCode.LeftShift) || eventData == null)
+            if (!Keys.Shift || eventData == null)
             {
                 return true;
             }
@@ -26,7 +26,7 @@ namespace InventoryTweaks.Patches
             switch (eventData.button)
             {
                 case PointerEventData.InputButton.Left:
-                    moved = Input.GetKey(KeyCode.LeftControl) && CanMoveAllOfType()
+                    moved = Keys.Ctrl && CanMoveAllOfType()
                         ? MoveAllOfType(__instance)
                         : MoveStack(__instance, __instance.amount);
                     break;

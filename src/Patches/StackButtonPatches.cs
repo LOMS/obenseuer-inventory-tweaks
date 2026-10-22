@@ -32,13 +32,14 @@ namespace InventoryTweaks.Patches
             "Alt + Click: take only the item types you already have in your inventory (backpack not counted).";
         private const float Margin = 8f;
 
-        private static readonly AccessTools.FieldRef<StoragePanelUI, Storage> CurrentStorage =
+        // Shared with TakeSimilar
+        internal static readonly AccessTools.FieldRef<StoragePanelUI, Storage> CurrentStorage =
             AccessTools.FieldRefAccess<StoragePanelUI, Storage>("currentStorage");
 
-        private static readonly AccessTools.FieldRef<StoragePanelUI, SoundInfo> TakeAllSound =
+        internal static readonly AccessTools.FieldRef<StoragePanelUI, SoundInfo> TakeAllSound =
             AccessTools.FieldRefAccess<StoragePanelUI, SoundInfo>("takeAllSound");
 
-        private static readonly AccessTools.FieldRef<Storage, bool> StorageChanged =
+        internal static readonly AccessTools.FieldRef<Storage, bool> StorageChanged =
             AccessTools.FieldRefAccess<Storage, bool>("storageChanged");
 
         private static readonly AccessTools.FieldRef<StoragePanelUI, TextMeshProUGUI> TitleText =
@@ -65,10 +66,8 @@ namespace InventoryTweaks.Patches
         private static bool _parentHasLayoutGroup;
         private static bool? _layoutWithAllowed;
 
-        private static bool ShiftHeld => Input.GetKey(KeyCode.LeftShift);
-
         /// <summary>Alt switches the button to "Stack allowed" in filtered containers.</summary>
-        private static bool AllowedMode(Storage storage) => TakeSimilar.AltHeld && HasAllowedFilter(storage);
+        private static bool AllowedMode(Storage storage) => Keys.Alt && HasAllowedFilter(storage);
 
         /// <summary>Creates the buttons once and refreshes their visibility.</summary>
         public static void OnPanelEnabled(StoragePanelUI panel)
@@ -442,7 +441,7 @@ namespace InventoryTweaks.Patches
             {
                 return;
             }
-            string text = (AllowedMode(storage) ? AllowedLabel : StackLabel) + (ShiftHeld ? BackpackSuffix : "");
+            string text = (AllowedMode(storage) ? AllowedLabel : StackLabel) + (Keys.Shift ? BackpackSuffix : "");
             if (_stack.Text.text != text)
             {
                 _stack.Text.text = text;
@@ -504,7 +503,7 @@ namespace InventoryTweaks.Patches
         {
             bool movedAny = false;
             bool leftOver = false;
-            foreach (SlotController source in GetSources(storage, ShiftHeld))
+            foreach (SlotController source in GetSources(storage, Keys.Shift))
             {
                 if (!ItemKind.HasItem(source) || !shouldMove(source))
                 {
@@ -577,16 +576,12 @@ namespace InventoryTweaks.Patches
         internal static int MoveToContainer(SlotController source, SlotController[] targets)
         {
             ItemStack stack = source.itemStack;
-            if (stack.itemReference == null)
+            Item item = GetItem(stack);
+            if (item == null)
             {
-                stack.SetItemReference();
-                if (stack.itemReference == null)
-                {
-                    return 0;
-                }
+                return 0;
             }
 
-            Item item = stack.itemReference.Item;
             ItemKind kind = ItemKind.Of(stack);
             int stackAmount = stack.itemAmount;
             int remaining = stackAmount;
@@ -646,20 +641,9 @@ namespace InventoryTweaks.Patches
     {
         private const string Label = "Take similar";
 
-        private static readonly AccessTools.FieldRef<StoragePanelUI, Storage> CurrentStorage =
-            AccessTools.FieldRefAccess<StoragePanelUI, Storage>("currentStorage");
-
-        private static readonly AccessTools.FieldRef<StoragePanelUI, SoundInfo> TakeAllSound =
-            AccessTools.FieldRefAccess<StoragePanelUI, SoundInfo>("takeAllSound");
-
-        private static readonly AccessTools.FieldRef<Storage, bool> StorageChanged =
-            AccessTools.FieldRefAccess<Storage, bool>("storageChanged");
-
         private static TextMeshProUGUI _label;
         private static string _originalText;
         private static bool _overridden;
-
-        public static bool AltHeld => Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
 
         /// <summary>Called every frame: "Take similar" on the Take all button while Alt is held.</summary>
         public static void UpdateLabel()
@@ -679,7 +663,7 @@ namespace InventoryTweaks.Patches
                 }
             }
 
-            if (AltHeld)
+            if (Keys.Alt)
             {
                 if (!_overridden)
                 {
@@ -700,7 +684,7 @@ namespace InventoryTweaks.Patches
 
         public static void Run(StoragePanelUI panel)
         {
-            Storage storage = CurrentStorage(panel);
+            Storage storage = StackButton.CurrentStorage(panel);
             if (storage == null || storage.Slots == null)
             {
                 return;
@@ -723,8 +707,8 @@ namespace InventoryTweaks.Patches
 
             if (movedAny)
             {
-                StorageChanged(storage) = true;
-                MiscAudioPlayer.PlaySound(TakeAllSound(panel));
+                StackButton.StorageChanged(storage) = true;
+                MiscAudioPlayer.PlaySound(StackButton.TakeAllSound(panel));
             }
             if (leftOver)
             {
@@ -739,7 +723,7 @@ namespace InventoryTweaks.Patches
         private static bool Prefix(StoragePanelUI __instance)
         {
             // Same guard as vanilla TakeAll; otherwise let vanilla run (and reject)
-            if (!TakeSimilar.AltHeld || TradePanel.instance.activeTrade != null)
+            if (!Keys.Alt || TradePanel.instance.activeTrade != null)
             {
                 return true;
             }

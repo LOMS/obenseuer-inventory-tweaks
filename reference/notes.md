@@ -1,7 +1,15 @@
 # Research notes
 
 File paths are relative to `reference\decompiled\`. Only summaries and names
-here; game code is not copied.
+here; game code is not copied. Game data (`Items.json`, `Recipes.json`, ...) is in
+`reference\game-data\` (copied by `just export`, not committed).
+
+Game build of 2026-10-22 (checked after the update): all patch targets and the private fields
+accessed by name are unchanged; `Items.json` still has 10 Break + 8 Slaughter items and
+"Your Cat" = 15650. New in the game: `StoragePanelUI` has a power button (`powerUI`) and a
+`modifier` indicator in the header (checked in game by the user: the Stack button layout is fine);
+`ItemInfo.UseItem` refuses while `PlayerCameraAnimations.ItemAnimationPlaying` and calls
+`CraftingBase.currentCraftingBase.CheckItems()` afterwards (the bulk path does neither yet).
 
 ## Environment (verified)
 - `BepInEx\core`: BepInEx.Core / BepInEx.Unity.Mono / BepInEx.Unity.Common

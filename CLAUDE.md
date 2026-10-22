@@ -57,7 +57,12 @@ research and design decisions: `reference\notes.md`.
 - `src\Patches\` — Harmony patches, one file per feature
 - `reference\notes.md` — research notes (committed)
 - `reference\decompiled\` — decompiled game code (NOT committed, do NOT copy into `src\`)
-- `tools\export-game-code.bat|.ps1` — refresh the decompiled code (requires `ilspycmd`)
+- `reference\game-data\` — copies of the game's `StreamingAssets\*.json` (`Items.json`, `Recipes.json`,
+  ...; NOT committed). Read these instead of the game folder (tools cannot read the Steam path).
+- `src\Keys.cs` — modifier keys (Shift = left only; Ctrl / Alt = either side); use it, do not
+  re-declare `ShiftHeld` & co. in patches
+- `tools\export-game-code.bat|.ps1` — refresh the decompiled code (requires `ilspycmd`) and
+  copy the game data files (data is copied on every run, even when the DLL is unchanged)
 - `justfile` — task runner (`just`): `build`, `deploy`, `package`, `release <x.y.z>`,
   `export`, `log [n]`, `clean`; deploy refuses to run while the game is running
 - `tools\build.bat`, `tools\deploy.bat`, `tools\package.bat`, `tools\release.bat` —
@@ -88,4 +93,7 @@ research and design decisions: `reference\notes.md`.
   user approval → code.
 - If data from the running game is needed (UI hierarchy, field values), tell
   the user what to look at in Unity Explorer and wait for the answer.
+- Prefer the `just` recipes (`just build`, `just export`, `just deploy`, `just log [n]`, ...)
+  over hand-made commands (manual `ilspycmd`, `dotnet build`, grepping the log, copying
+  files). Check `justfile` first; fall back to manual commands only if no recipe fits.
 - When in doubt, ask instead of guessing.
