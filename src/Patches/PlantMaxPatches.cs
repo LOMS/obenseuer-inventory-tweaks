@@ -14,8 +14,6 @@ namespace InventoryTweaks.Patches
     {
         private const string TooltipTitle = "Plant";
 
-        private static bool ShiftHeld => Input.GetKey(KeyCode.LeftShift);
-
         /// <summary>The garden the button belongs to, if it is the open one.</summary>
         private static Growing GetGrowing(RecipeButton button)
         {
@@ -54,7 +52,7 @@ namespace InventoryTweaks.Patches
         /// <summary>Returns true when the click was handled.</summary>
         public static bool TryPlantMax(RecipeButton button)
         {
-            if (!ShiftHeld || AmountSliderUI.instance == null || AmountSliderUI.instance.sliderIsVisible)
+            if (!Keys.Shift || AmountSliderUI.instance == null || AmountSliderUI.instance.sliderIsVisible)
             {
                 return false;
             }

@@ -53,8 +53,6 @@ namespace InventoryTweaks.Patches
         private static bool _soundBatchPlayed;
         private static AudioClip _suppressedClip;
 
-        private static bool ShiftHeld => Input.GetKey(KeyCode.LeftShift);
-
         public static BulkKind GetKind(ItemData itemData, int index)
         {
             if (itemData == null || itemData.slotController == null || ItemInfo.instance.childItem != null)
@@ -91,7 +89,7 @@ namespace InventoryTweaks.Patches
         {
             ItemData itemData = info.ItemData;
             bool confirming = IsPending(itemData, index);
-            if (!ShiftHeld && !confirming)
+            if (!Keys.Shift && !confirming)
             {
                 return false;
             }
@@ -99,7 +97,7 @@ namespace InventoryTweaks.Patches
             switch (GetKind(itemData, index))
             {
                 case BulkKind.BreakAll:
-                    if (!ShiftHeld)
+                    if (!Keys.Shift)
                     {
                         return false;
                     }
@@ -424,7 +422,7 @@ namespace InventoryTweaks.Patches
             {
                 return $"Slaughter {_pendingCount}?";
             }
-            if (!ShiftHeld)
+            if (!Keys.Shift)
             {
                 return null;
             }

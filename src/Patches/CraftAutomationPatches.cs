@@ -70,12 +70,6 @@ namespace InventoryTweaks.Patches
 
         public static bool Active => _station != null;
 
-        private static bool CtrlHeld => Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-
-        private static bool AltHeld => Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
-
-        private static bool ShiftHeld => Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-
         private static RecipeInfoUI RecipeInfo
         {
             get
@@ -105,8 +99,8 @@ namespace InventoryTweaks.Patches
                 return false;
             }
 
-            bool ctrl = CtrlHeld;
-            bool alt = AltHeld;
+            bool ctrl = Keys.Ctrl;
+            bool alt = Keys.Alt;
             if (!ctrl && !alt)
             {
                 // A manual click means the player has taken over; vanilla Craft then runs
@@ -232,7 +226,7 @@ namespace InventoryTweaks.Patches
         /// </summary>
         public static bool TryCraftOne(RecipeButton button)
         {
-            if (!ShiftHeld || AmountSliderUI.instance == null || AmountSliderUI.instance.sliderIsVisible)
+            if (!Keys.Shift || AmountSliderUI.instance == null || AmountSliderUI.instance.sliderIsVisible)
             {
                 return false;
             }
@@ -473,11 +467,11 @@ namespace InventoryTweaks.Patches
             {
                 return null;
             }
-            if (CtrlHeld)
+            if (Keys.Ctrl)
             {
                 return CraftAllLabel;
             }
-            return AltHeld ? CraftAmountLabel : null;
+            return Keys.Alt ? CraftAmountLabel : null;
         }
 
         private static void UpdateLabels()
