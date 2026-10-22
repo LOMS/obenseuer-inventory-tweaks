@@ -1,6 +1,9 @@
 # Decompiled game code (third-party, never commit)
 reference/decompiled/
 
+# Game data copied by tools/export-game-code (Items.json, Recipes.json, ...; third-party, never commit)
+reference/game-data/
+
 # Directory with experiments & discoveries, jus for my convenience.
 discovery
 
