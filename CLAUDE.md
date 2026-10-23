@@ -29,6 +29,13 @@ research and design decisions: `reference\notes.md`.
   the station on, ESC stops (swallowed, the window stays open).
 - Plant max (`src\Patches\PlantMaxPatches.cs`): Shift + Click on a recipe in a
   garden / animal cage list plants as many as possible via `Growing.StartGrow`.
+- Plant quality order (`src\Patches\PlantQualityPatches.cs`): the base game
+  counts the inventory as part of the open garden / cage storage now
+  (`Growing.ExtraInputSlots`); the mod only makes planting consume the worst quality first.
+- Quick harvest (`src\Patches\QuickHarvestPatches.cs`): Shift + Click on a plant in a
+  farm's progress grid harvests every ripe plant from it to the end of the grid straight
+  into the player's inventory (`Growing.Harvest` per plant, items redirected in
+  `Storage.AddToSlots`).
 - All moves/actions reuse the game's own methods (`QuickMove`, `ItemAction.Invoke`,
   ...) so vanilla checks are never bypassed.
 

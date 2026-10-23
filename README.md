@@ -77,8 +77,13 @@ https://github.com/user-attachments/assets/972c2720-6dbc-4eb9-a3fe-44f5ee6a04f1
 
 
 **Gardens and animal cages**
-- **Plant max** (Shift + Click on a recipe in the list): plant as many as
-  possible in one click
+- **Quick plant** (Shift + Click on a recipe in the list): plant as many as
+  possible in one click. The mod makes planting use the worst quality first.
+- **Quick harvest** (Shift + Click on a plant in the farm's progress grid): harvests
+  every ripe plant from the clicked one to the end of the grid (the clicked one and
+  everything to its right and below) straight into your inventory. Ripe means past the
+  growing stage: spoiling, spoiled, or fruiting with fruits ready. Stops when the
+  inventory is full
 
 <details>
 <summary>▶ Video: Plant max</summary>
