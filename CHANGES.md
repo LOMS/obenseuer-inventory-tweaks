@@ -2,6 +2,14 @@
 
 Newest first. Each release lists only what changed since the previous one.
 
+## Unreleased
+
+### Changed
+- **Craft amount / Craft all keep going** when the station window is closed, another menu is opened,
+  another recipe is selected, or Esc is pressed. Only **Ctrl + Esc** stops them now (the station's
+  own inventory, power and skill decide when they end: no ingredients left, no power, station gone).
+- A plain Craft click or Shift + Click on a recipe no longer stops a running sequence.
+
 ## v1.0.0 — unreleased
 
 ### Added

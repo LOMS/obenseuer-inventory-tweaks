@@ -66,7 +66,8 @@ https://github.com/user-attachments/assets/c81f8f15-3eaa-4375-bca6-fb428a1e9a01
   and pressing Craft. Works only if the recipe can be crafted now; otherwise the click is a normal one
 - **Craft amount** (Alt + Click on the Craft button): choose how many times to craft
 - **Craft all** (Ctrl + Click on the Craft button): craft until the ingredients run out
-- **Esc** stops the **Craft amount** and **Craft all** sequences; the station window stays open
+- **Ctrl + Esc** stops the **Craft amount** and **Craft all** sequences; the station window stays open.
+  Plain Esc, closing the station window, opening another menu or choosing another recipe do not stop them.
 
 <details>
 <summary>▶ Video: craft amount/all demonstration</summary>

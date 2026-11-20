@@ -26,7 +26,8 @@ research and design decisions: `reference\notes.md`.
 - Craft automation (`src\Patches\CraftAutomationPatches.cs`): Shift + Click on a
   recipe of a station's list crafts it once; Alt + Click on the station's Craft button — craft N times (game's amount slider); Ctrl + Click —
   until the ingredients run out; waits for the button between crafts, switches
-  the station on, ESC stops (swallowed, the window stays open).
+  the station on, Ctrl + ESC stops (swallowed, the window stays open); plain ESC, closing the window
+  or another recipe do not stop a run.
 - Plant max (`src\Patches\PlantMaxPatches.cs`): Shift + Click on a recipe in a
   garden / animal cage list plants as many as possible via `Growing.StartGrow`.
 - Plant quality order (`src\Patches\PlantQualityPatches.cs`): the base game

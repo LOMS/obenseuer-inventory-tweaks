@@ -11,10 +11,11 @@ namespace InventoryTweaks.Patches
     /// Automates the Craft button of a station (manufacturing):
     /// - Alt + Click: "Craft amount" — pick how many times to craft (the game's amount slider);
     /// - Ctrl + Click: "Craft all" — craft until the ingredients run out;
-    /// - ESC stops the run (and is swallowed, so the station window stays open).
-    /// Every step is the game's own manufacturing.Craft(), issued only when the vanilla Craft
-    /// button is enabled again. A run also ends when the window is closed, another recipe is
-    /// selected or the station cannot be powered.
+    /// - Ctrl + ESC stops the run (the press is swallowed, so the station window stays open).
+    ///   Plain ESC, closing the window, selecting another recipe or a plain Craft click do not stop it.
+    /// Every step is the game's own manufacturing.Craft() of the run's recipe, issued only while the
+    /// station has the ingredients and can take another craft. The run ends when the ingredients run out,
+    /// the station cannot be powered, the station is gone, or Ctrl + ESC is pressed.
     /// </summary>
     internal static class CraftAutomation
     {
@@ -30,6 +31,10 @@ namespace InventoryTweaks.Patches
         private static readonly AccessTools.FieldRef<manufacturing, int> InProgress =
             AccessTools.FieldRefAccess<manufacturing, int>("CraftingInProgress");
 
+        // Protected in the game: "can these ingredients be crafted here" (CraftingBase.CompareRecipeToItems)
+        private static readonly System.Reflection.MethodInfo CompareRecipeToItemsMethod =
+            AccessTools.Method(typeof(CraftingBase), "CompareRecipeToItems");
+
         private static readonly AccessTools.FieldRef<AmountSliderUI, int> SliderValue =
             AccessTools.FieldRefAccess<AmountSliderUI, int>("currentValue");
 
@@ -41,7 +46,7 @@ namespace InventoryTweaks.Patches
 
         // Run state
         private static manufacturing _station;
-        private static int _recipeId;
+        private static Recipe _recipe;
         private static int _remaining;
         private static int _done;
         private static bool _unlimited;
@@ -103,9 +108,8 @@ namespace InventoryTweaks.Patches
             bool alt = Keys.Alt;
             if (!ctrl && !alt)
             {
-                // A manual click means the player has taken over; vanilla Craft then runs
-                // (it only flashes the power icon if the station is off)
-                Stop();
+                // A plain click is one vanilla craft; a run going on keeps going.
+                // Vanilla Craft runs next (it only flashes the power icon if the station is off)
                 EnsurePower(station);
                 return false;
             }
@@ -236,8 +240,6 @@ namespace InventoryTweaks.Patches
                 return false;
             }
 
-            // The player took over from a running series
-            Stop();
             station.SetSelectedRecipe(button.recipe);
             EnsurePower(station);
             _inside = true;
@@ -280,7 +282,7 @@ namespace InventoryTweaks.Patches
         private static void Start(manufacturing station, Recipe recipe, int count)
         {
             _station = station;
-            _recipeId = recipe.ID;
+            _recipe = recipe;
             _unlimited = count == int.MaxValue;
             _remaining = count;
             _done = 0;
@@ -314,25 +316,16 @@ namespace InventoryTweaks.Patches
         private static void Step()
         {
             manufacturing station = _station;
-            RecipeInfoUI info = RecipeInfo;
-            if (!IsOpen(station) || info == null)
+            if (station == null)
             {
+                // Destroyed (the station left its scene)
                 Stop();
                 return;
             }
 
-            // Another recipe selected, or the recipe is gone from the list (ingredients ran out)
-            Recipe shown = info.CurrentRecipe();
-            if (shown == null || shown.ID != _recipeId)
-            {
-                Stop();
-                return;
-            }
-
-            // The recipe went grey in the list (ingredients, modifiers or skill): nothing to craft.
-            // The Craft button itself is not looked at: it is also grey while the station is busy
-            // and is redrawn a moment after a timed craft finishes, and Craft() does not need it.
-            if (!CanCraft(shown, info))
+            // Ingredients, skill and modifiers judged by the station itself: the run does not depend
+            // on the window, on the selected recipe or on the Craft button
+            if (!CanCraft(station, _recipe))
             {
                 Stop();
                 return;
@@ -351,13 +344,18 @@ namespace InventoryTweaks.Patches
                 return;
             }
 
+            // Craft() works on the station's selected recipe: use the run's recipe for this one craft,
+            // then put back whatever the player had selected
+            Recipe selected = SelectedRecipe(station);
             _inside = true;
             try
             {
+                station.SetSelectedRecipe(_recipe);
                 station.Craft();
             }
             finally
             {
+                station.SetSelectedRecipe(selected);
                 _inside = false;
             }
 
@@ -369,14 +367,16 @@ namespace InventoryTweaks.Patches
         }
 
         /// <summary>
-        /// Whether the recipe is grey in the station's list. The game decides that on every list
-        /// rebuild (ingredients, skill) and keeps the shown recipe's button in recipeInfo.currentButton.
+        /// The game's own test for a recipe that can be crafted in this station now: the items in its
+        /// inventory, and the skill and modifiers (the same tests that grey a recipe out in the list).
         /// </summary>
-        private static bool CanCraft(Recipe recipe, RecipeInfoUI info)
+        private static bool CanCraft(manufacturing station, Recipe recipe)
         {
-            RecipeButton button = info.currentButton;
-            return button != null && !button.disabledButton
-                && RecipeInfoUI.CheckModifiers(recipe, info.modifiers);
+            if (recipe == null || !RecipeInfoUI.CheckModifiers(recipe, station.ModifiersWithUpgrades))
+            {
+                return false;
+            }
+            return (bool)CompareRecipeToItemsMethod.Invoke(station, new object[] { recipe, null, false, true });
         }
 
         /// <summary>
@@ -443,10 +443,10 @@ namespace InventoryTweaks.Patches
 
         // ---- ESC ---------------------------------------------------------------------------
 
-        /// <summary>True if this "Pause Menu" press must be hidden from the game.</summary>
+        /// <summary>True if this "Pause Menu" press must be hidden from the game (Ctrl + ESC stops a run).</summary>
         public static bool ConsumeEscape()
         {
-            if (_station != null)
+            if (_station != null && Keys.Ctrl)
             {
                 Stop();
                 _escapeFrame = Time.frameCount;
@@ -551,7 +551,7 @@ namespace InventoryTweaks.Patches
                 HintTooltip.Attach(button.gameObject, "Craft",
                     "Alt + Click: craft several times (choose the amount).\n" +
                     "Ctrl + Click: craft until the ingredients run out.\n" +
-                    "Esc: stop.");
+                    "Ctrl + Esc: stop.");
             }
         }
     }
@@ -583,7 +583,7 @@ namespace InventoryTweaks.Patches
         }
     }
 
-    /// <summary>ESC ("Pause Menu") during a run only stops it; the game never sees that press.</summary>
+    /// <summary>Ctrl + ESC ("Pause Menu") during a run stops it; the game never sees that press.</summary>
     [HarmonyPatch(typeof(InputManager), nameof(InputManager.GetKeyDown), typeof(string))]
     internal static class CraftEscapePatch
     {

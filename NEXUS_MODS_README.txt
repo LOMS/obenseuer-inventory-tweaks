@@ -34,7 +34,7 @@ Source code: [url=https://github.com/LOMS/obenseuer-inventory-tweaks]https://git
 [*][color=#bf9000][b][Shift + Click][/b][/color][color=#D4D4D8] on a recipe - craft it once, without opening it and pressing Craft.[/color][/*]
 [*][color=#bf9000][b][Alt + Click][/b][/color][color=#D4D4D8] on Craft - craft N times (you choose N).[/color][/*]
 [*][color=#bf9000][b][Ctrl + Click][/b][/color][color=#D4D4D8] on Craft - craft until the ingredients run out.[/color][/*]
-[*][color=#bf9000][b][Esc][/b][/color][color=#D4D4D8] - stops the sequence; the station window stays open.[/color][/*]
+[*][color=#bf9000][b][Ctrl + Esc][/b][/color][color=#D4D4D8] - stops the sequence; the station window stays open. Plain Esc, closing the window or choosing another recipe do not stop it.[/color][/*]
 [*][color=#D4D4D8]A switched-off station is turned on automatically by any click on Craft, and turned off again when its crafting is over.[/color][/*]
 [/list]
 [color=#D4D4D8][b]Gardens and animal cages[/b]:[/color]
